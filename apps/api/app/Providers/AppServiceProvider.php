@@ -6,6 +6,7 @@ use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Modules\Campaigns\Policies\CampaignPolicy;
 use App\Modules\Payments\Domain\Contracts\PaymentProvider;
 use App\Modules\Payments\Infrastructure\Providers\MockPaymentProvider;
+use App\Modules\Payments\Infrastructure\Providers\StripePaymentProvider;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Gate;
@@ -19,7 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(PaymentProvider::class, MockPaymentProvider::class);
+        $this->app->bind(PaymentProvider::class, function ($app): PaymentProvider {
+            return match (config('payments.driver')) {
+                'stripe' => $app->make(StripePaymentProvider::class),
+                default => $app->make(MockPaymentProvider::class),
+            };
+        });
     }
 
     /**

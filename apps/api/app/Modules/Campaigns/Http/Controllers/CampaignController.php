@@ -14,6 +14,17 @@ use Illuminate\Support\Facades\Gate;
 
 class CampaignController
 {
+    public function mine(Request $request): AnonymousResourceCollection
+    {
+        $campaigns = Campaign::query()
+            ->with('costItems')
+            ->where('creator_id', $request->user()->id)
+            ->latest()
+            ->paginate(20);
+
+        return CampaignResource::collection($campaigns);
+    }
+
     public function index(): AnonymousResourceCollection
     {
         $campaigns = Campaign::query()

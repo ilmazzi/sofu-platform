@@ -24,7 +24,13 @@ class AuthController
 {
     public function register(RegisterRequest $request, AuditLogger $audit): UserResource
     {
-        $user = User::create($request->validated());
+        $data = $request->validated();
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'role' => $data['role'] ?? 'supporter',
+        ]);
 
         event(new Registered($user));
 

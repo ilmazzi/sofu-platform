@@ -147,6 +147,82 @@ class PaymentsTest extends TestCase
         ]);
     }
 
+    public function test_stripe_webhook_requires_valid_signature(): void
+    {
+        config(['payments.stripe.webhook_secret' => 'whsec_test_sofu']);
+
+        $this->call('POST', '/api/v1/payments/webhooks/stripe', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_STRIPE_SIGNATURE' => 't='.time().',v1=invalid',
+        ], '{"id":"evt_x"}')
+            ->assertBadRequest();
+    }
+
+    public function test_stripe_webhook_payment_intent_succeeded_is_idempotent(): void
+    {
+        config(['payments.stripe.webhook_secret' => 'whsec_test_sofu']);
+
+        $payment = $this->createStripePayment();
+        $payload = $this->stripeEventPayload('evt_stripe_pi_ok', 'payment_intent.succeeded', $payment->provider_payment_id);
+        $header = $this->stripeSignatureHeader($payload, 'whsec_test_sofu');
+
+        $this->call('POST', '/api/v1/payments/webhooks/stripe', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_STRIPE_SIGNATURE' => $header,
+        ], $payload)
+            ->assertCreated()
+            ->assertJsonPath('payment_status', PaymentStatus::Captured->value);
+
+        $this->call('POST', '/api/v1/payments/webhooks/stripe', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_STRIPE_SIGNATURE' => $header,
+        ], $payload)
+            ->assertOk()
+            ->assertJsonPath('payment_status', PaymentStatus::Captured->value);
+
+        $this->assertDatabaseCount('payment_provider_events', 1);
+        $this->assertDatabaseHas('reservations', [
+            'id' => $payment->reservation_id,
+            'status' => ReservationStatus::ConvertedToPayment->value,
+        ]);
+    }
+
+    public function test_stripe_webhook_payment_intent_failed_updates_reservation(): void
+    {
+        config(['payments.stripe.webhook_secret' => 'whsec_test_sofu']);
+
+        $payment = $this->createStripePayment();
+        $payload = json_encode([
+            'id' => 'evt_stripe_pi_fail',
+            'object' => 'event',
+            'type' => 'payment_intent.payment_failed',
+            'data' => [
+                'object' => [
+                    'id' => $payment->provider_payment_id,
+                    'last_payment_error' => ['message' => 'Your card was declined.'],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+        $header = $this->stripeSignatureHeader($payload, 'whsec_test_sofu');
+
+        $this->call('POST', '/api/v1/payments/webhooks/stripe', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_STRIPE_SIGNATURE' => $header,
+        ], $payload)
+            ->assertCreated()
+            ->assertJsonPath('payment_status', PaymentStatus::Failed->value);
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => PaymentStatus::Failed->value,
+            'failure_reason' => 'Your card was declined.',
+        ]);
+        $this->assertDatabaseHas('reservations', [
+            'id' => $payment->reservation_id,
+            'status' => ReservationStatus::Failed->value,
+        ]);
+    }
+
     /**
      * @return array{0: User, 1: Reservation}
      */
@@ -182,5 +258,43 @@ class PaymentsTest extends TestCase
             ->assertCreated();
 
         return Payment::query()->where('reservation_id', $reservation->id)->firstOrFail();
+    }
+
+    private function createStripePayment(): Payment
+    {
+        [$supporter, $reservation] = $this->createReservation();
+
+        return Payment::query()->create([
+            'reservation_id' => $reservation->id,
+            'provider' => 'stripe',
+            'provider_payment_id' => 'pi_test_'.uniqid(),
+            'status' => PaymentStatus::RequiresConfirmation,
+            'amount_cents' => $reservation->effective_price_cents,
+            'currency' => 'EUR',
+            'client_secret' => 'pi_test_secret',
+        ]);
+    }
+
+    private function stripeEventPayload(string $eventId, string $type, string $paymentIntentId): string
+    {
+        return json_encode([
+            'id' => $eventId,
+            'object' => 'event',
+            'type' => $type,
+            'data' => [
+                'object' => [
+                    'id' => $paymentIntentId,
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+    }
+
+    private function stripeSignatureHeader(string $payload, string $secret): string
+    {
+        $timestamp = time();
+        $signedPayload = $timestamp.'.'.$payload;
+        $signature = hash_hmac('sha256', $signedPayload, $secret);
+
+        return 't='.$timestamp.',v1='.$signature;
     }
 }

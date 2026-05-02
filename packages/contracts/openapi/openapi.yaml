@@ -1,0 +1,1410 @@
+openapi: 3.0.3
+info:
+  title: Sofu API
+  version: 0.0.0
+  description: |
+    Contract for the Sofu Laravel API (`apps/api`). JSON resources use a top-level `data` wrapper
+    (Laravel `JsonResource`).
+
+    **Browser / SPA (Sanctum stateful):** use cookie sessions. For mutating requests, obtain a CSRF
+    cookie from `GET /sanctum/csrf-cookie` (Laravel Sanctum), then send the `X-XSRF-TOKEN` header
+    and cookies on API calls. Configure `SANCTUM_STATEFUL_DOMAINS` and CORS so the frontend origin
+    is allowed.
+
+    **Request correlation:** responses include `X-Request-Id` (or echo `X-Request-Id` from the client).
+servers:
+  - url: http://localhost:8000
+    description: Local (php artisan serve)
+tags:
+  - name: Health
+  - name: Identity
+  - name: Me
+  - name: Campaigns
+  - name: Reservations
+  - name: Payments
+  - name: Backoffice
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/me:
+    get:
+      tags: [Me]
+      summary: Current authenticated user
+      security:
+        - session: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/me/campaigns:
+    get:
+      tags: [Me, Campaigns]
+      summary: Campaigns owned by the current user (every status)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCampaigns'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/identity/register:
+    post:
+      tags: [Identity]
+      summary: Register (starts session)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWrapped'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/identity/login:
+    post:
+      tags: [Identity]
+      summary: Login (session)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWrapped'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/identity/logout:
+    post:
+      tags: [Identity]
+      summary: Logout (invalidate session)
+      security:
+        - session: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /api/v1/identity/forgot-password:
+    post:
+      tags: [Identity]
+      summary: Request password reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/identity/reset-password:
+    post:
+      tags: [Identity]
+      summary: Complete password reset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/identity/password:
+    put:
+      tags: [Identity]
+      summary: Update password (authenticated)
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/identity/email/verification-notification:
+    post:
+      tags: [Identity]
+      summary: Resend email verification
+      security:
+        - session: []
+      responses:
+        '200':
+          description: Already verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '202':
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/identity/email/verify/{id}/{hash}:
+    get:
+      tags: [Identity]
+      summary: Verify email (signed URL — query signature required)
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          description: Invalid signature or hash
+
+  /api/v1/campaigns:
+    get:
+      tags: [Campaigns]
+      summary: List public campaigns
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCampaigns'
+    post:
+      tags: [Campaigns]
+      summary: Create campaign draft
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreCampaignRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/campaigns/{slug}:
+    get:
+      tags: [Campaigns]
+      summary: Get campaign by slug
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/campaigns/{slug}/submit-for-review:
+    post:
+      tags: [Campaigns]
+      summary: Submit draft for review
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/InvalidCampaignTransition'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/campaigns/{slug}/publish:
+    post:
+      tags: [Campaigns]
+      summary: Publish approved campaign
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/InvalidCampaignTransition'
+
+  /api/v1/backoffice/campaigns/{slug}/approve:
+    post:
+      tags: [Campaigns]
+      summary: Approve campaign (operator/admin)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/InvalidCampaignTransition'
+
+  /api/v1/backoffice/campaigns/{slug}/reject:
+    post:
+      tags: [Campaigns]
+      summary: Reject campaign (operator/admin)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/InvalidCampaignTransition'
+
+  /api/v1/campaigns/{slug}/reservations:
+    post:
+      tags: [Reservations]
+      summary: Create reservation (idempotent)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Idempotent replay (same key + same supporter/campaign)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationWrapped'
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Conflict (campaign closed, duplicate reservation, idempotency mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleMessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/me/reservations:
+    get:
+      tags: [Reservations]
+      summary: List current user's reservations
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReservations'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/reservations/{reservation}/payment-intent:
+    post:
+      tags: [Payments]
+      summary: Create or return mock payment intent
+      security:
+        - session: []
+      parameters:
+        - name: reservation
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Reservation id
+      responses:
+        '200':
+          description: Existing intent returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentWrapped'
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/payments/webhooks/mock:
+    post:
+      tags: [Payments]
+      summary: Mock payment provider webhook (idempotent)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockPaymentWebhookRequest'
+      responses:
+        '200':
+          description: Duplicate event replay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockWebhookResult'
+        '201':
+          description: Event recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockWebhookResult'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/backoffice/campaigns:
+    get:
+      tags: [Backoffice]
+      summary: List campaigns (filters)
+      security:
+        - session: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/CampaignStatus'
+        - name: creator_id
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBackofficeCampaigns'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/backoffice/campaigns/in-review:
+    get:
+      tags: [Backoffice]
+      summary: List campaigns submitted for review
+      security:
+        - session: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBackofficeCampaigns'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/backoffice/campaigns/{slug}:
+    get:
+      tags: [Backoffice]
+      summary: Backoffice campaign detail
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackofficeCampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/backoffice/audit-logs:
+    get:
+      tags: [Backoffice]
+      summary: List audit logs
+      security:
+        - session: []
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: actor_id
+          in: query
+          schema:
+            type: integer
+        - name: target_type
+          in: query
+          schema:
+            type: string
+        - name: target_id
+          in: query
+          schema:
+            type: integer
+        - name: request_id
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogs'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/backoffice/ledger-entries:
+    get:
+      tags: [Backoffice]
+      summary: List ledger entries
+      security:
+        - session: []
+      parameters:
+        - name: account
+          in: query
+          schema:
+            type: string
+        - name: source_type
+          in: query
+          schema:
+            type: string
+        - name: source_id
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLedgerEntries'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: laravel_session
+      description: Session cookie after login/register (name may vary via `SESSION_COOKIE`).
+
+  parameters:
+    CampaignSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+    PerPage:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        maxLength: 160
+
+  responses:
+    Unauthorized:
+      description: Unauthenticated
+    Forbidden:
+      description: Forbidden
+    NotFound:
+      description: Not found
+    ValidationError:
+      description: Laravel validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LaravelValidationError'
+    InvalidCampaignTransition:
+      description: Invalid campaign status transition
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: sofu-api
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    SimpleMessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    LaravelValidationError:
+      type: object
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    ApiErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    User:
+      type: object
+      required: [id, type, name, email, role]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [user]
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          description: supporter, creator, operator, admin
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    UserWrapped:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        password_confirmation:
+          type: string
+        role:
+          type: string
+          enum: [supporter, creator]
+          description: Optional; defaults to supporter
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        remember:
+          type: boolean
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, email, password, password_confirmation]
+      properties:
+        token:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        password_confirmation:
+          type: string
+
+    UpdatePasswordRequest:
+      type: object
+      required: [current_password, password, password_confirmation]
+      properties:
+        current_password:
+          type: string
+        password:
+          type: string
+        password_confirmation:
+          type: string
+
+    CampaignStatus:
+      type: string
+      enum:
+        - draft
+        - submitted_for_review
+        - approved
+        - published
+        - activated
+        - successful
+        - closed
+        - rejected
+        - cancelled
+        - expired
+        - failed
+
+    CampaignCostItem:
+      type: object
+      required: [id, type, label, amount_cents, sort_order]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [campaign_cost_item]
+        label:
+          type: string
+        amount_cents:
+          type: integer
+        sort_order:
+          type: integer
+
+    Campaign:
+      type: object
+      required:
+        - id
+        - type
+        - creator_id
+        - title
+        - slug
+        - status
+        - currency
+        - target_supporters
+        - active_reservations_count
+        - min_price_cents
+        - max_price_cents
+        - current_price_cents
+        - total_amount_cents
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [campaign]
+        creator_id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
+        currency:
+          type: string
+        target_supporters:
+          type: integer
+        active_reservations_count:
+          type: integer
+        min_price_cents:
+          type: integer
+        max_price_cents:
+          type: integer
+        current_price_cents:
+          type: integer
+        total_amount_cents:
+          type: integer
+        cost_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignCostItem'
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CampaignWrapped:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Campaign'
+
+    StoreCampaignRequest:
+      type: object
+      required:
+        - title
+        - description
+        - currency
+        - target_supporters
+        - min_price_cents
+        - max_price_cents
+        - cost_items
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        currency:
+          type: string
+          description: ISO 4217; normalized to uppercase on the server
+        target_supporters:
+          type: integer
+        min_price_cents:
+          type: integer
+        max_price_cents:
+          type: integer
+        cost_items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [label, amount_cents]
+            properties:
+              label:
+                type: string
+              amount_cents:
+                type: integer
+
+    ReservationStatus:
+      type: string
+      enum:
+        - pending
+        - active
+        - cancelled
+        - expired
+        - converted_to_payment
+        - failed
+
+    ReservationCampaignEmbed:
+      type: object
+      required: [id, type, title, slug, current_price_cents, active_reservations_count]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [campaign]
+        title:
+          type: string
+        slug:
+          type: string
+        current_price_cents:
+          type: integer
+        active_reservations_count:
+          type: integer
+
+    PriceSnapshotEmbed:
+      type: object
+      required: [id, type, active_reservations_count, calculated_price_cents, reason]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [campaign_price_snapshot]
+        active_reservations_count:
+          type: integer
+        calculated_price_cents:
+          type: integer
+        reason:
+          type: string
+
+    Reservation:
+      type: object
+      required:
+        - id
+        - type
+        - campaign_id
+        - supporter_id
+        - status
+        - price_quoted_cents
+        - effective_price_cents
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [reservation]
+        campaign_id:
+          type: string
+        supporter_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        price_quoted_cents:
+          type: integer
+        effective_price_cents:
+          type: integer
+        price_snapshot_id:
+          type: string
+          nullable: true
+        campaign:
+          $ref: '#/components/schemas/ReservationCampaignEmbed'
+        price_snapshot:
+          $ref: '#/components/schemas/PriceSnapshotEmbed'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ReservationWrapped:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Reservation'
+
+    PaymentStatus:
+      type: string
+      enum:
+        - requires_confirmation
+        - authorized
+        - captured
+        - failed
+        - cancelled
+        - refunded
+
+    Payment:
+      type: object
+      required:
+        - id
+        - type
+        - reservation_id
+        - provider
+        - provider_payment_id
+        - status
+        - amount_cents
+        - currency
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [payment]
+        reservation_id:
+          type: string
+        provider:
+          type: string
+        provider_payment_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        amount_cents:
+          type: integer
+        currency:
+          type: string
+        provider_client_secret:
+          type: string
+          nullable: true
+        failure_reason:
+          type: string
+          nullable: true
+        authorized_at:
+          type: string
+          format: date-time
+          nullable: true
+        captured_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PaymentWrapped:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Payment'
+
+    PaymentProviderEvent:
+      type: object
+      required: [id, type, provider, provider_event_id, event_type]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [payment_provider_event]
+        provider:
+          type: string
+        provider_event_id:
+          type: string
+        event_type:
+          type: string
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    MockPaymentWebhookRequest:
+      type: object
+      required: [event_id, type, provider_payment_id]
+      properties:
+        event_id:
+          type: string
+        type:
+          type: string
+          enum: [payment.authorized, payment.captured, payment.failed]
+        provider_payment_id:
+          type: string
+        failure_reason:
+          type: string
+
+    MockWebhookResult:
+      type: object
+      required: [data, payment_id, payment_status]
+      properties:
+        data:
+          $ref: '#/components/schemas/PaymentProviderEvent'
+        payment_id:
+          type: string
+          nullable: true
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+          nullable: true
+
+    BackofficeUserEmbed:
+      type: object
+      required: [id, type, name, email, role]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [user]
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+
+    BackofficeCampaign:
+      allOf:
+        - $ref: '#/components/schemas/Campaign'
+        - type: object
+          properties:
+            creator:
+              $ref: '#/components/schemas/BackofficeUserEmbed'
+            audit_logs:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditLog'
+
+    BackofficeCampaignWrapped:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/BackofficeCampaign'
+
+    AuditLog:
+      type: object
+      required: [id, type, action, actor_type, target_type]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [audit_log]
+        action:
+          type: string
+        actor_type:
+          type: string
+        actor_id:
+          type: string
+          nullable: true
+        target_type:
+          type: string
+        target_id:
+          type: string
+          nullable: true
+        request_id:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+        metadata:
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    LedgerEntry:
+      type: object
+      required: [id, type, account, direction, amount_cents, currency, source_type]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [ledger_entry]
+        account:
+          type: string
+        direction:
+          type: string
+          enum: [debit, credit]
+        amount_cents:
+          type: integer
+        currency:
+          type: string
+        source_type:
+          type: string
+        source_id:
+          type: string
+          nullable: true
+        metadata:
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    PaginationLinks:
+      type: object
+      properties:
+        first:
+          type: string
+          nullable: true
+        last:
+          type: string
+          nullable: true
+        prev:
+          type: string
+          nullable: true
+        next:
+          type: string
+          nullable: true
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        path:
+          type: string
+        per_page:
+          type: integer
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+    PaginatedCampaigns:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Campaign'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedReservations:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reservation'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedBackofficeCampaigns:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BackofficeCampaign'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedAuditLogs:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedLedgerEntries:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerEntry'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'

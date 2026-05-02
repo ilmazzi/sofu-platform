@@ -6,6 +6,10 @@ use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Domain\Exceptions\InvalidCampaignTransition;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Modules\Notifications\Infrastructure\Notifications\CampaignApprovedNotification;
+use App\Modules\Notifications\Infrastructure\Notifications\CampaignPublishedNotification;
+use App\Modules\Notifications\Infrastructure\Notifications\CampaignRejectedNotification;
+use App\Modules\Notifications\Infrastructure\Notifications\CampaignSubmittedForReviewNotification;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +21,7 @@ class TransitionCampaignStatusAction
 
     public function execute(Campaign $campaign, CampaignStatus $to, ?User $actor = null): Campaign
     {
-        return DB::transaction(function () use ($campaign, $to, $actor): Campaign {
+        $fresh = DB::transaction(function () use ($campaign, $to, $actor): Campaign {
             $lockedCampaign = Campaign::query()
                 ->whereKey($campaign->id)
                 ->lockForUpdate()
@@ -45,6 +49,25 @@ class TransitionCampaignStatusAction
 
             return $lockedCampaign->fresh(['costItems']);
         });
+
+        $this->dispatchTransitionNotifications($fresh, $to);
+
+        return $fresh;
+    }
+
+    private function dispatchTransitionNotifications(Campaign $campaign, CampaignStatus $to): void
+    {
+        $campaign->loadMissing('creator');
+
+        match ($to) {
+            CampaignStatus::SubmittedForReview => User::query()
+                ->whereIn('role', ['operator', 'admin'])
+                ->each(fn (User $user) => $user->notify(new CampaignSubmittedForReviewNotification($campaign))),
+            CampaignStatus::Approved => $campaign->creator?->notify(new CampaignApprovedNotification($campaign)),
+            CampaignStatus::Rejected => $campaign->creator?->notify(new CampaignRejectedNotification($campaign)),
+            CampaignStatus::Published => $campaign->creator?->notify(new CampaignPublishedNotification($campaign)),
+            default => null,
+        };
     }
 
     private function canTransition(CampaignStatus $from, CampaignStatus $to): bool

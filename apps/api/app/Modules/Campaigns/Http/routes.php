@@ -3,6 +3,10 @@
 use App\Modules\Campaigns\Http\Controllers\CampaignController;
 use Illuminate\Support\Facades\Route;
 
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('/me/campaigns', [CampaignController::class, 'mine'])->name('me.campaigns.index');
+});
+
 Route::prefix('campaigns')->name('campaigns.')->group(function (): void {
     Route::get('/', [CampaignController::class, 'index'])->name('index');
     Route::get('/{campaign:slug}', [CampaignController::class, 'show'])->name('show');

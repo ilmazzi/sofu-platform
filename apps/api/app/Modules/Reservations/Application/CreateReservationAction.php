@@ -5,6 +5,7 @@ namespace App\Modules\Reservations\Application;
 use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Modules\Notifications\Infrastructure\Notifications\ReservationCreatedNotification;
 use App\Modules\Pricing\Domain\CampaignPriceCalculator;
 use App\Modules\Pricing\Infrastructure\Eloquent\CampaignPriceSnapshot;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
@@ -32,7 +33,7 @@ class CreateReservationAction
             $supporter->id,
         ]));
 
-        return DB::transaction(function () use ($campaign, $supporter, $idempotencyKey, $payloadHash): array {
+        $result = DB::transaction(function () use ($campaign, $supporter, $idempotencyKey, $payloadHash): array {
             $existing = Reservation::query()
                 ->where('supporter_id', $supporter->id)
                 ->where('idempotency_key', $idempotencyKey)
@@ -115,5 +116,12 @@ class CreateReservationAction
                 'created' => true,
             ];
         });
+
+        if ($result['created']) {
+            $reservation = $result['reservation']->loadMissing('supporter', 'campaign');
+            $reservation->supporter?->notify(new ReservationCreatedNotification($reservation));
+        }
+
+        return $result;
     }
 }

@@ -1,0 +1,22 @@
+{
+  "name": "@sofu/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "description": "OpenAPI contract and generated TypeScript types for the Sofu API",
+  "license": "UNLICENSED",
+  "scripts": {
+    "generate": "openapi-typescript openapi/openapi.yaml -o generated/typescript/api.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1"
+  },
+  "exports": {
+    ".": {
+      "types": "./generated/typescript/api.d.ts"
+    }
+  },
+  "files": [
+    "openapi",
+    "generated"
+  ]
+}

@@ -1,3 +1,33 @@
+## Sofu API — local database
+
+This app defaults to **SQLite** in `.env.example` so you can run without PostgreSQL. After `cp .env.example .env` and `php artisan key:generate`:
+
+```bash
+touch database/database.sqlite
+php artisan migrate
+```
+
+Switch `DB_CONNECTION` to `pgsql` and set `DB_*` when you have a Postgres instance.
+
+### Seed users (local)
+
+Password for all seeded accounts: **`password`**.
+
+```bash
+php artisan db:seed
+```
+
+| Email | Role |
+|-------|------|
+| supporter@sofu.test | supporter |
+| creator@sofu.test | creator (+ 1 draft + 1 published campaign) |
+| operator@sofu.test | operator |
+| admin@sofu.test | admin |
+
+Creators can list every state via `GET /api/v1/me/campaigns` (and **My campaigns** in the SPA).
+
+---
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

@@ -32,7 +32,26 @@ class IdentityAuthenticationTest extends TestCase
             ->assertJsonPath('data.email', 'creator@example.com');
 
         $this->assertAuthenticated();
-        $this->assertDatabaseHas('users', ['email' => 'creator@example.com']);
+        $this->assertDatabaseHas('users', ['email' => 'creator@example.com', 'role' => 'supporter']);
+    }
+
+    public function test_user_can_register_as_creator_when_role_is_creator(): void
+    {
+        Notification::fake();
+
+        $this
+            ->fromFrontend()
+            ->postJson('/api/v1/identity/register', [
+                'name' => 'Creator',
+                'email' => 'only-creator@example.com',
+                'password' => 'secure-password',
+                'password_confirmation' => 'secure-password',
+                'role' => 'creator',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.role', 'creator');
+
+        $this->assertDatabaseHas('users', ['email' => 'only-creator@example.com', 'role' => 'creator']);
     }
 
     public function test_user_can_login_and_logout(): void
