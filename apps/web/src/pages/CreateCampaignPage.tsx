@@ -342,7 +342,7 @@ export default function CreateCampaignPage(): ReactElement {
             accept="image/png,image/jpeg,image/webp,image/gif"
             multiple
             clearable
-            value={imageFiles.length > 0 ? imageFiles : null}
+            value={imageFiles.length > 0 ? imageFiles : undefined}
             onChange={(files) => setImageFiles(files ?? [])}
             radius="md"
           />

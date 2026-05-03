@@ -21,7 +21,7 @@ import { CampaignGrowthPlant } from '../components/CampaignGrowthPlant'
 import { CampaignMetricsBlock } from '../components/CampaignMetricsBlock'
 import { StripePaymentForm } from '../components/StripePaymentForm'
 import { useAuth } from '../context/AuthContext'
-import { apiFetch } from '../lib/api/client'
+import { apiFetch, apiFetchForm } from '../lib/api/client'
 import { campaignCategoryLabel, campaignStatusBadgeColor, campaignStatusLabel } from '../lib/campaignLabels'
 import { formatEuro, supporterProgressPercent } from '../lib/campaignMetrics'
 
@@ -626,7 +626,7 @@ export default function CampaignDetailPage(): ReactElement {
                           accept="image/png,image/jpeg,image/webp,image/gif"
                           multiple
                           clearable
-                          value={draftGalleryFiles.length > 0 ? draftGalleryFiles : null}
+                          value={draftGalleryFiles.length > 0 ? draftGalleryFiles : undefined}
                           onChange={(files) => setDraftGalleryFiles(files ?? [])}
                           size="sm"
                         />
