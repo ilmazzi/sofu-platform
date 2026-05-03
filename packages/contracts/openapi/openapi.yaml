@@ -13,8 +13,8 @@ info:
 
     **Request correlation:** responses include `X-Request-Id` (or echo `X-Request-Id` from the client).
 servers:
-  - url: http://localhost:8000
-    description: Local (php artisan serve)
+  - url: http://sofu-platform.test
+    description: Local (Laravel Herd)
 tags:
   - name: Health
   - name: Identity

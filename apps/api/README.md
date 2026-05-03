@@ -1,5 +1,20 @@
 ## Sofu API — local database
 
+### Laravel Herd (monorepo)
+
+The Laravel app lives in **`apps/api`** (`public/` is here). If Herd links **`sofu-platform.test`** to the **repo root**, routes such as `/api/v1/campaigns` return **404** because nginx never hits Laravel.
+
+From this directory (`apps/api`), link the site:
+
+```bash
+herd unlink sofu-platform   # only if an old link pointed at the monorepo root
+herd link sofu-platform
+```
+
+Confirm `herd links` shows path `…/sofu-platform/apps/api`.
+
+---
+
 This app defaults to **SQLite** in `.env.example` so you can run without PostgreSQL. After `cp .env.example .env` and `php artisan key:generate`:
 
 ```bash

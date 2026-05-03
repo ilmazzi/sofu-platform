@@ -54,7 +54,7 @@ export async function apiFetch(path: string, init: ApiFetchInit = {}): Promise<R
     if (!token) {
       throw new Error(
         'Missing XSRF-TOKEN after CSRF cookie request. Use http://localhost:5173 (not 127.0.0.1), ' +
-          'keep VITE_API_URL empty for the dev proxy, and run the API on http://localhost:8000.',
+          'keep VITE_API_URL empty for the dev proxy, and run the API at http://sofu-platform.test (e.g. Laravel Herd).',
       )
     }
     headers.set('X-XSRF-TOKEN', token)

@@ -9,11 +9,11 @@ export default defineConfig({
       // Use `localhost` (not 127.0.0.1) so Set-Cookie Host matches the browser when you open
       // http://localhost:5173 — otherwise session/XSRF cookies are scoped to 127.0.0.1 and disappear.
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://sofu-platform.test',
         changeOrigin: true,
       },
       '/sanctum': {
-        target: 'http://localhost:8000',
+        target: 'http://sofu-platform.test',
         changeOrigin: true,
       },
     },

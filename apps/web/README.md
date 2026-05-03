@@ -1,12 +1,12 @@
 # Sofu web (SPA)
 
-React + TypeScript + Vite + React Router. Uses `@sofu/contracts` for API types and a **dev proxy** so Sanctum session + CSRF cookies stay on the same origin as the app (`localhost:5173` → Laravel on `127.0.0.1:8000`).
+React + TypeScript + Vite + React Router. Uses `@sofu/contracts` for API types and a **dev proxy** so Sanctum session + CSRF cookies stay on the same origin as the app (`localhost:5173` → Laravel at `http://sofu-platform.test` via Laravel Herd).
 
 **UI:** [Mantine](https://mantine.dev/) v9 (MIT, open source) — senza Tailwind. Stile globale e shell in `MantineProvider` + `AppShell` (`src/main.tsx`, `src/layouts/RootLayout.tsx`); tema base in `src/theme/mantineTheme.ts`. Le singole pagine si possono migrare gradualmente da HTML/`index.css` a componenti Mantine (`Button`, `Card`, `TextInput`, …).
 
 ## Prerequisites
 
-- API running: `cd apps/api && php artisan serve` (default `http://127.0.0.1:8000`)
+- API reachable at **`http://sofu-platform.test`** (e.g. Laravel Herd linked to `apps/api`), with `APP_URL` matching that host in `apps/api/.env`
 - API `.env` aligned with the SPA origin, e.g. `FRONTEND_URL=http://localhost:5173` and `SANCTUM_STATEFUL_DOMAINS` including `localhost:5173` (see `apps/api/.env.example`)
 
 ## Setup
@@ -26,9 +26,9 @@ Per **Stripe** in locale: imposta `VITE_STRIPE_PUBLISHABLE_KEY=pk_test_…` (Das
 npm run dev
 ```
 
-Open the URL printed by Vite as **`http://localhost:5173`** (not `http://127.0.0.1:5173`). The dev proxy talks to `http://localhost:8000` so Laravel’s `Set-Cookie` host matches `localhost`; mixing `127.0.0.1` in the browser with that setup drops session/CSRF cookies and breaks register/login.
+Open the URL printed by Vite as **`http://localhost:5173`** (not `http://127.0.0.1:5173`). The dev proxy forwards `/api` and `/sanctum` to **`http://sofu-platform.test`**; mixing `127.0.0.1` in the browser with `localhost:5173` cookies can drop session/CSRF cookies and break register/login.
 
-Run the API so it accepts `Host: localhost:8000`, e.g. `php artisan serve --host=localhost` (or the default if it already answers on `localhost:8000`).
+Ensure Herd is serving the API at `http://sofu-platform.test` (or adjust `vite.config.ts` `server.proxy` targets to match your Herd hostname).
 
 ## Build
 
