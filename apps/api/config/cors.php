@@ -31,4 +31,3 @@ return [
     // Required for Sanctum cookie auth from a different origin (SPA).
     'supports_credentials' => true,
 ];
-

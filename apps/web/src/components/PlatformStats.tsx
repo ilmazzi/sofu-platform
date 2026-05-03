@@ -1,5 +1,5 @@
 import { type ReactElement } from 'react'
-import { Box, Group, SimpleGrid, Stack, Text } from '@mantine/core'
+import { Box, SimpleGrid, Stack, Text } from '@mantine/core'
 
 type Stat = {
   value: string

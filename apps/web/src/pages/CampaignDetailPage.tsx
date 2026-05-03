@@ -287,7 +287,7 @@ export default function CampaignDetailPage(): ReactElement {
         </Text>
       </Group>
 
-      <Grid gutter="xl">
+      <Grid>
         {/* Colonna principale */}
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Stack gap="xl">

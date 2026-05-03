@@ -44,11 +44,11 @@ class ReservationController
         Reservation $reservation,
         CancelReservationAction $cancelReservation,
     ): JsonResponse {
-        
+
         if ($request->user() === null) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
-        
+
         if ($request->user()->id !== $reservation->supporter_id) {
             throw new AuthorizationException('You cannot cancel this reservation.');
         }

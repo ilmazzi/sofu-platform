@@ -145,7 +145,7 @@ export default function CampaignsPage(): ReactElement {
 
   return (
     <Box py="md">
-      <Grid gutter="xl">
+      <Grid>
         {/* Sidebar filtri */}
         <Grid.Col span={{ base: 12, md: 3 }}>
           <Box

@@ -1,6 +1,9 @@
 import { createBrowserRouter } from 'react-router-dom'
 import RootLayout from './layouts/RootLayout'
+import BackofficeAuditLogsPage from './pages/BackofficeAuditLogsPage'
+import BackofficeDashboardPage from './pages/BackofficeDashboardPage'
 import BackofficeReviewQueuePage from './pages/BackofficeReviewQueuePage'
+import BackofficeUsersPage from './pages/BackofficeUsersPage'
 import CampaignDetailPage from './pages/CampaignDetailPage'
 import CampaignsPage from './pages/CampaignsPage'
 import CreateCampaignPage from './pages/CreateCampaignPage'
@@ -25,7 +28,10 @@ export const router = createBrowserRouter([
       { path: 'me/reservations', element: <MyReservationsPage /> },
       { path: 'payments/complete', element: <PaymentCompletePage /> },
       { path: 'me/campaigns', element: <MyCampaignsPage /> },
+      { path: 'backoffice', element: <BackofficeDashboardPage /> },
       { path: 'backoffice/review', element: <BackofficeReviewQueuePage /> },
+      { path: 'backoffice/audit-logs', element: <BackofficeAuditLogsPage /> },
+      { path: 'backoffice/users', element: <BackofficeUsersPage /> },
     ],
   },
 ])

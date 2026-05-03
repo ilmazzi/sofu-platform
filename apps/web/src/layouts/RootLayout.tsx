@@ -1,4 +1,5 @@
-import { Anchor, AppShell, Button, Group, Text } from '@mantine/core'
+import { Anchor, AppShell, Button, Group, Menu, Text } from '@mantine/core'
+import { IconChevronDown } from '@tabler/icons-react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { ShellNavLink } from '../components/ShellNavLink'
 import { useAuth } from '../context/AuthContext'
@@ -8,6 +9,7 @@ export default function RootLayout(): React.ReactElement {
   const location = useLocation()
   const campaignsNavActive =
     location.pathname.startsWith('/campaigns') && location.pathname !== '/campaigns/new'
+  const backofficeActive = location.pathname.startsWith('/backoffice')
 
   return (
     <AppShell header={{ height: 56 }} padding="md">
@@ -29,7 +31,31 @@ export default function RootLayout(): React.ReactElement {
                   </>
                 ) : null}
                 {user.role === 'operator' || user.role === 'admin' ? (
-                  <ShellNavLink to="/backoffice/review" label="Revisioni" />
+                  <Menu shadow="md" width={200}>
+                    <Menu.Target>
+                      <Button
+                        variant={backofficeActive ? 'light' : 'subtle'}
+                        size="compact-sm"
+                        rightSection={<IconChevronDown size={14} />}
+                      >
+                        Backoffice
+                      </Button>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                      <Menu.Item component={Link} to="/backoffice">
+                        Dashboard
+                      </Menu.Item>
+                      <Menu.Item component={Link} to="/backoffice/review">
+                        Revisioni
+                      </Menu.Item>
+                      <Menu.Item component={Link} to="/backoffice/audit-logs">
+                        Audit Logs
+                      </Menu.Item>
+                      <Menu.Item component={Link} to="/backoffice/users">
+                        Utenti
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
                 ) : null}
                 <Text size="xs" c="dimmed" maw={160} truncate="end" visibleFrom="sm">
                   {user.email}

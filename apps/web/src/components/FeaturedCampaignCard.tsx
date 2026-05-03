@@ -51,11 +51,13 @@ export function FeaturedCampaignCard({
         transition: 'all 0.2s ease',
         cursor: 'pointer',
       }}
-      sx={{
-        '&:hover': {
-          borderColor: '#495057',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-        },
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#495057'
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#dee2e6'
+        e.currentTarget.style.boxShadow = 'none'
       }}
     >
       <Box pos="relative">
