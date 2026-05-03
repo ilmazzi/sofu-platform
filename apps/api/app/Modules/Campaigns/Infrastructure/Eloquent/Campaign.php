@@ -65,6 +65,11 @@ class Campaign extends Model
         return $this->hasMany(CampaignCostItem::class)->orderBy('sort_order');
     }
 
+    public function media(): HasMany
+    {
+        return $this->hasMany(CampaignMedia::class)->orderBy('sort_order');
+    }
+
     public function priceSnapshots(): HasMany
     {
         return $this->hasMany(CampaignPriceSnapshot::class);

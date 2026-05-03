@@ -282,6 +282,42 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /api/v1/campaigns/{slug}/media:
+    post:
+      tags: [Campaigns]
+      summary: Upload campaign images (draft only)
+      description: Multipart upload of one or more images. Max 10 files per request; max 12 images per campaign total.
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [images]
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: OK — campaign including updated media_urls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /api/v1/campaigns/{slug}:
     get:
       tags: [Campaigns]
@@ -1043,6 +1079,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CampaignCostItem'
+        media_urls:
+          type: array
+          description: Public URLs for uploaded gallery images (order preserved). Empty when none.
+          items:
+            type: string
+            format: uri
         published_at:
           type: string
           format: date-time

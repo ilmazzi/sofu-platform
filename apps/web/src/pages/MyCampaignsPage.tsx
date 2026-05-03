@@ -54,7 +54,7 @@ function CampaignOwnerRow({ c }: { c: Campaign }): ReactElement {
     >
       <Group wrap="nowrap" align="stretch" gap={0}>
         <Box w={{ base: 120, sm: 168 }} mih={112} style={{ flexShrink: 0, overflow: 'hidden' }}>
-          <CampaignCoverImage slug={c.slug} title={c.title} height={112} />
+          <CampaignCoverImage slug={c.slug} title={c.title} mediaUrls={c.media_urls} height={112} />
         </Box>
         <Stack gap="sm" p="md" style={{ flex: 1, minWidth: 0 }} justify="center">
           <Group gap="xs" wrap="wrap">

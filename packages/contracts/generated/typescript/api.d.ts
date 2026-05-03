@@ -517,6 +517,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/{slug}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload campaign images (draft only)
+         * @description Multipart upload of one or more images. Max 10 files per request; max 12 images per campaign total.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: components["parameters"]["CampaignSlug"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        images: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK — campaign including updated media_urls */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CampaignWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["ValidationError"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/campaigns/{slug}": {
         parameters: {
             query?: never;
@@ -1393,6 +1443,8 @@ export interface components {
             current_price_cents: number;
             total_amount_cents: number;
             cost_items?: components["schemas"]["CampaignCostItem"][];
+            /** @description Public URLs for uploaded gallery images (order preserved). Empty when none. */
+            media_urls?: string[];
             /** Format: date-time */
             published_at?: string | null;
             /** Format: date-time */

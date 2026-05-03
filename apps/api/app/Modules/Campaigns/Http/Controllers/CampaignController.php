@@ -17,7 +17,7 @@ class CampaignController
     public function mine(Request $request): AnonymousResourceCollection
     {
         $campaigns = Campaign::query()
-            ->with('costItems')
+            ->with(['costItems', 'media'])
             ->where('creator_id', $request->user()->id)
             ->latest()
             ->paginate(20);
@@ -28,7 +28,7 @@ class CampaignController
     public function index(): AnonymousResourceCollection
     {
         $campaigns = Campaign::query()
-            ->with('costItems')
+            ->with(['costItems', 'media'])
             ->whereIn('status', [
                 CampaignStatus::Published,
                 CampaignStatus::Activated,
@@ -54,7 +54,7 @@ class CampaignController
     {
         Gate::forUser($request->user())->authorize('view', $campaign);
 
-        return CampaignResource::make($campaign->load('costItems'));
+        return CampaignResource::make($campaign->load(['costItems', 'media']));
     }
 
     public function submitForReview(

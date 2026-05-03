@@ -4,6 +4,7 @@ namespace App\Modules\Campaigns\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class CampaignResource extends JsonResource
 {
@@ -30,6 +31,15 @@ class CampaignResource extends JsonResource
             'current_price_cents' => $this->current_price_cents,
             'total_amount_cents' => $this->total_amount_cents,
             'cost_items' => CampaignCostItemResource::collection($this->whenLoaded('costItems')),
+            'media_urls' => $this->whenLoaded(
+                'media',
+                fn () => $this->media
+                    ->sortBy('sort_order')
+                    ->values()
+                    ->map(fn ($m) => Storage::disk('public')->url($m->path))
+                    ->all(),
+                [],
+            ),
             'published_at' => $this->published_at?->toISOString(),
             'starts_at' => $this->starts_at?->toISOString(),
             'ends_at' => $this->ends_at?->toISOString(),

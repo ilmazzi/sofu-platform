@@ -5,6 +5,7 @@ import {
   Badge,
   Box,
   Button,
+  FileInput,
   Grid,
   Group,
   Skeleton,
@@ -56,6 +57,9 @@ export default function CampaignDetailPage(): ReactElement {
   const [lifecycleMsg, setLifecycleMsg] = useState<string | null>(null)
   const [lifecyclePending, setLifecyclePending] = useState(false)
   const [syncedReservation, setSyncedReservation] = useState<Reservation | null>(null)
+  const [draftGalleryFiles, setDraftGalleryFiles] = useState<File[]>([])
+  const [draftGalleryPending, setDraftGalleryPending] = useState(false)
+  const [draftGalleryMsg, setDraftGalleryMsg] = useState<string | null>(null)
 
   const paymentJustSucceeded = searchParams.get('payment') === 'success'
 
@@ -125,6 +129,42 @@ export default function CampaignDetailPage(): ReactElement {
   const isOwner = user !== null && campaign !== null && user.id === campaign.creator_id
   const isBackoffice = user?.role === 'operator' || user?.role === 'admin'
   const canReserve = campaign !== null && RESERVABLE.includes(campaign.status)
+
+  async function uploadDraftGallery(): Promise<void> {
+    if (!campaign || draftGalleryFiles.length === 0) return
+    setDraftGalleryMsg(null)
+    setDraftGalleryPending(true)
+    try {
+      const fd = new FormData()
+      for (const file of draftGalleryFiles) {
+        fd.append('images[]', file)
+      }
+      const res = await apiFetchForm(`/api/v1/campaigns/${encodeURIComponent(campaign.slug)}/media`, fd)
+      const raw = await res.text()
+      let body: unknown = null
+      try {
+        body = raw === '' ? null : JSON.parse(raw)
+      } catch {
+        body = null
+      }
+      if (res.status === 422 && body && typeof body === 'object' && 'errors' in body) {
+        const errors = (body as { errors: Record<string, string[]> }).errors
+        setDraftGalleryMsg(Object.values(errors).flat()[0] ?? 'Caricamento non valido.')
+        return
+      }
+      if (!res.ok) {
+        setDraftGalleryMsg(`Caricamento non riuscito (${res.status}).`)
+        return
+      }
+      setDraftGalleryFiles([])
+      setReloadTick((t) => t + 1)
+      setDraftGalleryMsg('Immagini aggiornate.')
+    } catch {
+      setDraftGalleryMsg('Errore di rete.')
+    } finally {
+      setDraftGalleryPending(false)
+    }
+  }
 
   async function runLifecycle(url: string): Promise<void> {
     setLifecycleMsg(null)
@@ -293,7 +333,7 @@ export default function CampaignDetailPage(): ReactElement {
           <Stack gap="xl">
             {/* Hero image */}
             <Box pos="relative" style={{ border: '1px solid #dee2e6' }}>
-              <CampaignCoverImage slug={campaign.slug} title={campaign.title} height={400} />
+              <CampaignCoverImage slug={campaign.slug} title={campaign.title} mediaUrls={campaign.media_urls} height={400} />
               <Box
                 pos="absolute"
                 inset={0}
@@ -578,17 +618,47 @@ export default function CampaignDetailPage(): ReactElement {
                   </Text>
                   <Stack gap="sm">
                     {isOwner && campaign.status === 'draft' ? (
-                      <Button
-                        type="button"
-                        loading={lifecyclePending}
-                        onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/submit-for-review`)}
-                        variant="outline"
-                        color="dark"
-                        size="sm"
-                        fullWidth
-                      >
-                        Invia in revisione
-                      </Button>
+                      <Stack gap="sm">
+                        <FileInput
+                          label="Galleria immagini"
+                          description="PNG, JPEG, WebP o GIF — fino a 10 file per volta (max 5 MB ciascuno)."
+                          placeholder="Scegli file…"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          multiple
+                          clearable
+                          value={draftGalleryFiles.length > 0 ? draftGalleryFiles : null}
+                          onChange={(files) => setDraftGalleryFiles(files ?? [])}
+                          size="sm"
+                        />
+                        <Button
+                          type="button"
+                          loading={draftGalleryPending}
+                          disabled={draftGalleryFiles.length === 0}
+                          variant="light"
+                          color="dark"
+                          size="sm"
+                          fullWidth
+                          onClick={() => void uploadDraftGallery()}
+                        >
+                          Carica immagini
+                        </Button>
+                        {draftGalleryMsg ? (
+                          <Alert color={draftGalleryMsg.includes('aggiornate') ? 'teal' : 'orange'} variant="light" p="sm">
+                            <Text size="xs">{draftGalleryMsg}</Text>
+                          </Alert>
+                        ) : null}
+                        <Button
+                          type="button"
+                          loading={lifecyclePending}
+                          onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/submit-for-review`)}
+                          variant="outline"
+                          color="dark"
+                          size="sm"
+                          fullWidth
+                        >
+                          Invia in revisione
+                        </Button>
+                      </Stack>
                     ) : null}
                     {isOwner && campaign.status === 'approved' ? (
                       <Button

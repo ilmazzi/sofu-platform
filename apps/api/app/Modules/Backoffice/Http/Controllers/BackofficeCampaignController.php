@@ -14,7 +14,7 @@ class BackofficeCampaignController
     public function index(BackofficeCampaignIndexRequest $request): AnonymousResourceCollection
     {
         $campaigns = Campaign::query()
-            ->with('creator')
+            ->with(['creator', 'media'])
             ->when($request->validated('status'), fn ($query, string $status) => $query->where('status', $status))
             ->when($request->validated('creator_id'), fn ($query, int $creatorId) => $query->where('creator_id', $creatorId))
             ->when($request->validated('q'), function ($query, string $term): void {
@@ -33,7 +33,7 @@ class BackofficeCampaignController
     public function inReview(BackofficeRequest $request): AnonymousResourceCollection
     {
         $campaigns = Campaign::query()
-            ->with('creator')
+            ->with(['creator', 'media'])
             ->where('status', CampaignStatus::SubmittedForReview)
             ->oldest('updated_at')
             ->paginate(20);
@@ -46,6 +46,7 @@ class BackofficeCampaignController
         $campaign->load([
             'creator',
             'costItems',
+            'media',
             'auditLogs' => fn ($query) => $query->limit(20),
         ]);
 

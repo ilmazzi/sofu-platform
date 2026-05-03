@@ -40,7 +40,8 @@ class CampaignsTest extends TestCase
             ->assertJsonPath('data.currency', 'EUR')
             ->assertJsonPath('data.current_price_cents', 4500)
             ->assertJsonPath('data.total_amount_cents', 420000)
-            ->assertJsonCount(2, 'data.cost_items');
+            ->assertJsonCount(2, 'data.cost_items')
+            ->assertJsonPath('data.media_urls', []);
 
         $this->assertDatabaseHas('campaigns', [
             'creator_id' => $user->id,

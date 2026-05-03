@@ -41,4 +41,13 @@ class CampaignPolicy
     {
         return $user->isBackoffice() && $campaign->status === CampaignStatus::SubmittedForReview;
     }
+
+    public function uploadMedia(User $user, Campaign $campaign): bool
+    {
+        if ($campaign->status !== CampaignStatus::Draft) {
+            return false;
+        }
+
+        return $campaign->creator_id === $user->id || $user->isBackoffice();
+    }
 }

@@ -62,7 +62,7 @@ class CreateCampaignAction
                 'currency' => $campaign->currency,
             ]);
 
-            return $campaign->load('costItems');
+            return $campaign->load(['costItems', 'media']);
         });
     }
 

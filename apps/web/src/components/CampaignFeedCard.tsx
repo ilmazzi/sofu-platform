@@ -46,7 +46,7 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
       }}
     >
       <Box pos="relative">
-        <CampaignCoverImage slug={c.slug} title={c.title} height={200} />
+        <CampaignCoverImage slug={c.slug} title={c.title} mediaUrls={c.media_urls} height={200} />
         <Box
           pos="absolute"
           inset={0}

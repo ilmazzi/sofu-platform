@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Campaigns\Http\Controllers\CampaignController;
+use App\Modules\Campaigns\Http\Controllers\CampaignMediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function (): void {
@@ -11,6 +12,9 @@ Route::prefix('campaigns')->name('campaigns.')->group(function (): void {
     Route::get('/', [CampaignController::class, 'index'])->name('index');
     Route::get('/{campaign:slug}', [CampaignController::class, 'show'])->name('show');
     Route::post('/', [CampaignController::class, 'store'])->middleware('auth:sanctum')->name('store');
+    Route::post('/{campaign:slug}/media', [CampaignMediaController::class, 'store'])
+        ->middleware('auth:sanctum')
+        ->name('media.store');
     Route::post('/{campaign:slug}/submit-for-review', [CampaignController::class, 'submitForReview'])
         ->middleware('auth:sanctum')
         ->name('submit-for-review');

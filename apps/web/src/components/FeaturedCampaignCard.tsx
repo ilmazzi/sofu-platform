@@ -61,7 +61,7 @@ export function FeaturedCampaignCard({
       }}
     >
       <Box pos="relative">
-        <CampaignCoverImage slug={c.slug} title={c.title} height={240} />
+        <CampaignCoverImage slug={c.slug} title={c.title} mediaUrls={c.media_urls} height={240} />
         <Box
           pos="absolute"
           inset={0}

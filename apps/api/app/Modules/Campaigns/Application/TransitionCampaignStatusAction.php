@@ -48,7 +48,7 @@ class TransitionCampaignStatusAction
                 'to' => $to->value,
             ]);
 
-            return $lockedCampaign->fresh(['costItems']);
+            return $lockedCampaign->fresh(['costItems', 'media']);
         });
 
         $this->dispatchTransitionNotifications($fresh, $to);

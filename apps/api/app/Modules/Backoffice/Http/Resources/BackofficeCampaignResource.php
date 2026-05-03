@@ -5,6 +5,7 @@ namespace App\Modules\Backoffice\Http\Resources;
 use App\Modules\Campaigns\Http\Resources\CampaignCostItemResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class BackofficeCampaignResource extends JsonResource
 {
@@ -38,6 +39,15 @@ class BackofficeCampaignResource extends JsonResource
             'current_price_cents' => $this->current_price_cents,
             'total_amount_cents' => $this->total_amount_cents,
             'cost_items' => CampaignCostItemResource::collection($this->whenLoaded('costItems')),
+            'media_urls' => $this->whenLoaded(
+                'media',
+                fn () => $this->media
+                    ->sortBy('sort_order')
+                    ->values()
+                    ->map(fn ($m) => Storage::disk('public')->url($m->path))
+                    ->all(),
+                [],
+            ),
             'audit_logs' => BackofficeAuditLogResource::collection($this->whenLoaded('auditLogs')),
             'published_at' => $this->published_at?->toISOString(),
             'starts_at' => $this->starts_at?->toISOString(),

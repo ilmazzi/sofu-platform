@@ -70,6 +70,34 @@ export async function apiFetch(path: string, init: ApiFetchInit = {}): Promise<R
   })
 }
 
+/** POST multipart (e.g. images). Do not set Content-Type — the browser sets the boundary. */
+export async function apiFetchForm(
+  path: string,
+  formData: FormData,
+  init: Omit<RequestInit, 'body'> = {},
+): Promise<Response> {
+  await ensureCsrfCookie()
+  const token = readXsrfTokenFromCookie()
+  if (!token) {
+    throw new Error(
+      'Missing XSRF-TOKEN after CSRF cookie request. Use the SPA origin that shares cookies with the API ' +
+        '(see apiFetch / Vite proxy).',
+    )
+  }
+  const { headers: inputHeaders, ...rest } = init
+  const headers = new Headers(inputHeaders)
+  headers.set('Accept', 'application/json')
+  headers.set('X-XSRF-TOKEN', token)
+
+  return fetch(apiUrl(path), {
+    ...rest,
+    method: init.method ?? 'POST',
+    credentials: 'include',
+    headers,
+    body: formData,
+  })
+}
+
 export async function apiJson<T>(path: string, init: ApiFetchInit = {}): Promise<T> {
   const res = await apiFetch(path, init)
   const text = await res.text()

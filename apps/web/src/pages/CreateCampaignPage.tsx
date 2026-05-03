@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Divider,
+  FileInput,
   Group,
   NumberInput,
   Paper,
@@ -21,7 +22,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
 import { useAuth } from '../context/AuthContext'
-import { apiFetch } from '../lib/api/client'
+import { apiFetch, apiFetchForm } from '../lib/api/client'
 
 type Campaign = components['schemas']['Campaign']
 type CampaignWrapped = { data: Campaign }
@@ -55,6 +56,7 @@ export default function CreateCampaignPage(): ReactElement {
   ])
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
 
   const isCreator = user?.role === 'creator' || user?.role === 'operator' || user?.role === 'admin'
 
@@ -91,6 +93,15 @@ export default function CreateCampaignPage(): ReactElement {
 
     if (cost_items.length === 0) {
       setError('Aggiungi almeno una voce di costo con etichetta e importo in centesimi.')
+      return
+    }
+
+    if (imageFiles.length === 0) {
+      setError('Aggiungi almeno un’immagine (PNG, JPEG, WebP o GIF).')
+      return
+    }
+    if (imageFiles.length > 10) {
+      setError('Puoi caricare al massimo 10 immagini alla volta.')
       return
     }
 
@@ -139,7 +150,34 @@ export default function CreateCampaignPage(): ReactElement {
         setError('Risposta imprevista dal server.')
         return
       }
-      navigate(`/campaigns/${json.data.slug}`, { replace: true })
+      const fd = new FormData()
+      for (const file of imageFiles) {
+        fd.append('images[]', file)
+      }
+      const uploadRes = await apiFetchForm(`/api/v1/campaigns/${encodeURIComponent(json.data.slug)}/media`, fd)
+      const uploadRaw = await uploadRes.text()
+      let uploadBody: unknown = null
+      try {
+        uploadBody = uploadRaw === '' ? null : JSON.parse(uploadRaw)
+      } catch {
+        uploadBody = null
+      }
+      if (uploadRes.status === 422 && uploadBody && typeof uploadBody === 'object' && 'errors' in uploadBody) {
+        const errors = (uploadBody as { errors: Record<string, string[]> }).errors
+        setError(
+          `Bozza creata, ma il caricamento immagini non è valido: ${Object.values(errors).flat()[0] ?? 'errori di validazione.'} Apri la scheda campagna per riprovare.`,
+        )
+        navigate(`/campaigns/${encodeURIComponent(json.data.slug)}`, { replace: true })
+        return
+      }
+      if (!uploadRes.ok) {
+        setError(
+          `Bozza creata, ma il caricamento immagini è fallito (${uploadRes.status}). Apri la scheda campagna per riprovare dall’area Gestione.`,
+        )
+        navigate(`/campaigns/${encodeURIComponent(json.data.slug)}`, { replace: true })
+        return
+      }
+      navigate(`/campaigns/${encodeURIComponent(json.data.slug)}`, { replace: true })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Richiesta non riuscita.'
       setError(message)
@@ -293,6 +331,21 @@ export default function CreateCampaignPage(): ReactElement {
               radius="md"
             />
           </SimpleGrid>
+
+          <Divider label="Immagini" labelPosition="left" />
+          <Text size="sm" c="dimmed">
+            Obbligatorio almeno un file. Formati: PNG, JPEG, WebP, GIF — fino a 10 file, max ~5 MB ciascuno.
+          </Text>
+          <FileInput
+            label="Galleria"
+            placeholder="Scegli una o più immagini…"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            multiple
+            clearable
+            value={imageFiles.length > 0 ? imageFiles : null}
+            onChange={(files) => setImageFiles(files ?? [])}
+            radius="md"
+          />
 
           <Divider label="Voci di costo (centesimi)" labelPosition="left" />
           <Text size="sm" c="dimmed">
