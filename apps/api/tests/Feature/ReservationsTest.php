@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
+use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -173,5 +174,141 @@ class ReservationsTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.campaign.slug', $campaign->slug);
+    }
+
+    public function test_supporter_can_cancel_own_active_reservation(): void
+    {
+        $campaign = Campaign::factory()->published()->create([
+            'total_amount_cents' => 8000,
+            'min_price_cents' => 1000,
+            'max_price_cents' => 5000,
+            'current_price_cents' => 5000,
+            'active_reservations_count' => 0,
+        ]);
+        $supporter = User::factory()->create();
+
+        $this
+            ->actingAs($supporter)
+            ->withHeader('Idempotency-Key', 'cancel-key')
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")
+            ->assertCreated();
+
+        $reservation = Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail();
+
+        $this
+            ->actingAs($supporter)
+            ->deleteJson("/api/v1/reservations/{$reservation->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', ReservationStatus::Cancelled->value);
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'status' => ReservationStatus::Cancelled->value,
+        ]);
+        $this->assertDatabaseHas('campaigns', [
+            'id' => $campaign->id,
+            'active_reservations_count' => 0,
+            'current_price_cents' => 5000,
+        ]);
+        $this->assertDatabaseHas('campaign_price_snapshots', [
+            'campaign_id' => $campaign->id,
+            'active_reservations_count' => 0,
+            'reason' => 'reservation_cancelled',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'reservation.cancelled',
+            'target_id' => $reservation->id,
+        ]);
+    }
+
+    public function test_cancellation_recalculates_price_for_remaining_supporters(): void
+    {
+        $campaign = Campaign::factory()->published()->create([
+            'total_amount_cents' => 8000,
+            'min_price_cents' => 1000,
+            'max_price_cents' => 5000,
+            'current_price_cents' => 5000,
+            'active_reservations_count' => 0,
+        ]);
+
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+
+        $this->actingAs($first)->withHeader('Idempotency-Key', 'first')->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")->assertCreated();
+        $this->actingAs($second)->withHeader('Idempotency-Key', 'second')->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")->assertCreated();
+
+        // After 2 reservations: 8000 / 2 = 4000
+        $this->assertDatabaseHas('campaigns', ['id' => $campaign->id, 'current_price_cents' => 4000]);
+
+        $reservation = Reservation::query()->where('supporter_id', $second->id)->firstOrFail();
+
+        $this
+            ->actingAs($second)
+            ->deleteJson("/api/v1/reservations/{$reservation->id}")
+            ->assertOk();
+
+        // After cancellation: 8000 / 1 = 8000, clamped to max 5000
+        $this->assertDatabaseHas('campaigns', [
+            'id' => $campaign->id,
+            'active_reservations_count' => 1,
+            'current_price_cents' => 5000,
+        ]);
+    }
+
+    public function test_supporter_cannot_cancel_already_cancelled_reservation(): void
+    {
+        $campaign = Campaign::factory()->published()->create();
+        $supporter = User::factory()->create();
+
+        $this
+            ->actingAs($supporter)
+            ->withHeader('Idempotency-Key', 'double-cancel')
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")
+            ->assertCreated();
+
+        $reservation = Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail();
+
+        $this->actingAs($supporter)->deleteJson("/api/v1/reservations/{$reservation->id}")->assertOk();
+        $this->actingAs($supporter)->deleteJson("/api/v1/reservations/{$reservation->id}")->assertConflict();
+    }
+
+    public function test_supporter_cannot_cancel_another_supporters_reservation(): void
+    {
+        $campaign = Campaign::factory()->published()->create();
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+
+        $this
+            ->actingAs($owner)
+            ->withHeader('Idempotency-Key', 'owner-key')
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")
+            ->assertCreated();
+
+        $reservation = Reservation::query()->where('supporter_id', $owner->id)->firstOrFail();
+
+        $this
+            ->actingAs($other)
+            ->deleteJson("/api/v1/reservations/{$reservation->id}")
+            ->assertForbidden();
+    }
+
+    public function test_guest_cannot_cancel_reservation(): void
+    {
+        $campaign = Campaign::factory()->published()->create();
+        $supporter = User::factory()->create();
+
+        $this
+            ->actingAs($supporter)
+            ->withHeader('Idempotency-Key', 'guest-cancel')
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")
+            ->assertCreated();
+
+        $reservation = Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail();
+
+        $this->app['auth']->forgetGuards();
+
+        $this
+            ->deleteJson("/api/v1/reservations/{$reservation->id}")
+            ->assertUnauthorized();
     }
 }

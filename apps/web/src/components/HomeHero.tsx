@@ -18,8 +18,8 @@ export function HomeHero({
       pos="relative"
       style={{
         overflow: 'hidden',
-        borderRadius: 'var(--mantine-radius-lg)',
-        minHeight: 'min(52vh, 520px)',
+        minHeight: 'min(60vh, 560px)',
+        border: '1px solid #dee2e6',
       }}
     >
       <Box
@@ -36,61 +36,89 @@ export function HomeHero({
         inset={0}
         style={{
           background:
-            'linear-gradient(180deg, rgba(12,10,18,0.25) 0%, rgba(12,10,18,0.55) 45%, rgba(12,10,18,0.88) 100%)',
+            'linear-gradient(135deg, rgba(102, 126, 234, 0.85) 0%, rgba(118, 75, 162, 0.9) 100%)',
+          mixBlendMode: 'multiply',
         }}
       />
-      <Box pos="relative" py={{ base: '2.5rem', sm: '3.5rem' }} px={{ base: 'md', sm: '2.5rem' }} pb={{ base: '2.75rem', sm: '3.75rem' }}>
-        <Stack gap="lg" maw={760}>
-          <Stack gap="md">
-            <Text size="sm" fw={700} tt="uppercase" c="rgba(255,255,255,0.75)" style={{ letterSpacing: '0.14em' }}>
-              Sofu · crowdfunding partecipativo
-            </Text>
+      <Box
+        pos="absolute"
+        inset={0}
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(12,10,18,0.15) 0%, rgba(12,10,18,0.45) 45%, rgba(12,10,18,0.75) 100%)',
+        }}
+      />
+      <Box pos="relative" py={{ base: '3rem', sm: '4rem' }} px={{ base: 'lg', sm: '3rem' }} pb={{ base: '3rem', sm: '4rem' }}>
+        <Stack gap="xl" maw={720}>
+          <Stack gap="lg">
+            <Group gap="sm" align="center">
+              <Text size="1.5rem" lh={1}>
+                💧
+              </Text>
+              <Text size="xs" fw={700} tt="uppercase" c="rgba(255,255,255,0.9)" style={{ letterSpacing: '0.15em' }}>
+                Sofu — Crowdfunding Etico
+              </Text>
+            </Group>
             <Title
               order={1}
               c="#fff"
-              fz={{ base: '2rem', sm: '2.75rem', md: '3.15rem' }}
-              fw={800}
-              lh={1.12}
-              style={{ letterSpacing: '-0.038em', textWrap: 'balance' }}
+              fz={{ base: '2.25rem', sm: '3rem', md: '3.5rem' }}
+              fw={600}
+              lh={1.15}
+              style={{ letterSpacing: '-0.04em', textWrap: 'balance', textShadow: '0 2px 16px rgba(0,0,0,0.3)' }}
             >
-              Più sostenitori, più il prezzo scende. Scegli il momento giusto per entrare.
+              Più droplets, più il prezzo scende.
             </Title>
-            <Text size="lg" c="rgba(255,255,255,0.9)" maw={620} lh={1.65} fz={{ base: 'md', sm: 'lg' }}>
-              Ogni campagna ha un obiettivo economico ripartito tra le persone: il contributo si adatta al numero di
-              partecipanti. Sotto trovi prezzo attuale, percorso verso il minimo e quanto puoi risparmiare rispetto al
-              picco iniziale.
+            <Text size="lg" c="rgba(255,255,255,0.95)" maw={580} lh={1.7} fz={{ base: 'md', sm: 'lg' }} fw={400} style={{ textShadow: '0 1px 8px rgba(0,0,0,0.25)' }}>
+              Ogni campagna ha un obiettivo economico condiviso: più persone si uniscono con i loro droplets, più il prezzo scende per tutti. Trasparenza totale su costi, prezzi e avanzamento.
             </Text>
           </Stack>
           {!authLoading && !user ? (
-            <Group gap="sm" wrap="wrap">
-              <Button component={Link} to="/register" size="md" color="orange" variant="filled" radius="md">
-                Inizia da qui
+            <Group gap="md" wrap="wrap">
+              <Button 
+                component={Link} 
+                to="/register" 
+                size="lg" 
+                color="dark" 
+                variant="filled" 
+                style={{ 
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                  textTransform: 'uppercase',
+                  fontSize: '0.75rem'
+                }}
+              >
+                Inizia ora
               </Button>
               <Button
                 component={Link}
                 to="/login"
-                size="md"
+                size="lg"
                 variant="outline"
-                radius="md"
                 styles={{
                   root: {
-                    borderColor: 'rgba(255,255,255,0.65)',
+                    borderColor: 'rgba(255,255,255,0.8)',
                     color: '#fff',
-                    background: 'rgba(255,255,255,0.06)',
+                    background: 'rgba(255,255,255,0.08)',
+                    backdropFilter: 'blur(8px)',
+                    fontWeight: 600,
+                    letterSpacing: '0.02em',
+                    textTransform: 'uppercase',
+                    fontSize: '0.75rem'
                   },
                 }}
               >
-                Ho già un account
+                Accedi
               </Button>
             </Group>
           ) : null}
           {!authLoading && user ? (
-            <Text size="sm" c="rgba(255,255,255,0.88)" lh={1.6}>
-              Bentornato, <strong>{user.name}</strong>. Le tue quote sono in{' '}
+            <Text size="sm" c="rgba(255,255,255,0.95)" lh={1.6} style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+              Bentornato, <strong>{user.name}</strong>. I tuoi droplets sono in{' '}
               <HeroLink to="/me/reservations">Le mie prenotazioni</HeroLink>.
             </Text>
           ) : null}
-          <Text size="xs" c="rgba(255,255,255,0.45)" mt="xs">
+          <Text size="xs" c="rgba(255,255,255,0.5)" mt="xs">
             Foto: team — Unsplash
           </Text>
         </Stack>
@@ -101,7 +129,7 @@ export function HomeHero({
 
 function HeroLink({ to, children }: { to: string; children: ReactNode }): ReactElement {
   return (
-    <Link to={to} style={{ color: '#ffb86c', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+    <Link to={to} style={{ color: '#ffd43b', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>
       {children}
     </Link>
   )

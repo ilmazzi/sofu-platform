@@ -2,25 +2,42 @@ import type { ReactElement } from 'react'
 import { Badge, Box, Group, Progress, Stack, Text } from '@mantine/core'
 import { Link } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
+import { CampaignCoverImage } from './CampaignCoverImage'
 import { campaignCategoryLabel, campaignStatusBadgeColor, campaignStatusLabel } from '../lib/campaignLabels'
 import { formatEuro, supporterProgressPercent } from '../lib/campaignMetrics'
-import { CampaignCoverImage } from './CampaignCoverImage'
 import { growthStageFromSupporterPercent } from '../lib/campaignGrowthStages'
 
 type Campaign = components['schemas']['Campaign']
 
-export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
-  const desc = c.description?.trim()
-  const blurb =
-    c.summary?.trim() ||
-    (desc ? desc.slice(0, 130) : '') ||
-    'Apri la scheda per obiettivi, costi e tutti i dettagli.'
+type FeaturedBadge = 'hot' | 'trending' | 'almost-complete' | 'new'
 
+function getBadgeConfig(type: FeaturedBadge): { label: string; color: string } {
+  switch (type) {
+    case 'hot':
+      return { label: 'Più attiva', color: 'red' }
+    case 'trending':
+      return { label: 'In crescita', color: 'orange' }
+    case 'almost-complete':
+      return { label: 'Quasi completa', color: 'yellow' }
+    case 'new':
+      return { label: 'Nuova', color: 'blue' }
+  }
+}
+
+export function FeaturedCampaignCard({
+  c,
+  featuredType,
+}: {
+  c: Campaign
+  featuredType?: FeaturedBadge
+}): ReactElement {
   const cat = campaignCategoryLabel(c.category)
   const supPct = supporterProgressPercent(c)
   const stage = growthStageFromSupporterPercent(supPct)
   const savings = Math.max(0, (c.max_price_cents - c.current_price_cents) / 100)
   const savingsPct = c.max_price_cents > 0 ? Math.round((savings / (c.max_price_cents / 100)) * 100) : 0
+
+  const badge = featuredType ? getBadgeConfig(featuredType) : null
 
   return (
     <Box
@@ -29,9 +46,7 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
       style={{
         textDecoration: 'none',
         color: 'inherit',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
+        display: 'block',
         border: '1px solid #dee2e6',
         transition: 'all 0.2s ease',
         cursor: 'pointer',
@@ -44,16 +59,30 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
       }}
     >
       <Box pos="relative">
-        <CampaignCoverImage slug={c.slug} title={c.title} height={200} />
+        <CampaignCoverImage slug={c.slug} title={c.title} height={240} />
         <Box
           pos="absolute"
           inset={0}
           style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%)',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%)',
             pointerEvents: 'none',
           }}
         />
-        <Group pos="absolute" bottom={12} left={12} right={12} justify="space-between" wrap="nowrap" gap="xs">
+        {badge ? (
+          <Badge
+            pos="absolute"
+            top={16}
+            left={16}
+            size="sm"
+            variant="filled"
+            color={badge.color}
+            tt="uppercase"
+            style={{ fontWeight: 600, letterSpacing: '0.05em', fontSize: '0.65rem' }}
+          >
+            {badge.label}
+          </Badge>
+        ) : null}
+        <Group pos="absolute" bottom={16} left={16} right={16} justify="space-between" wrap="nowrap" gap="xs">
           <Badge 
             variant="filled" 
             color={campaignStatusBadgeColor(c.status)} 
@@ -83,16 +112,15 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
         </Group>
       </Box>
 
-      <Stack gap="md" p="md" style={{ flex: 1 }}>
-        <Text size="lg" fw={600} lineClamp={2} lh={1.3} c="dark" style={{ letterSpacing: '-0.02em' }}>
-          {c.title}
-        </Text>
-        <Text size="sm" c="dimmed" lineClamp={2} lh={1.5} fw={400}>
-          {blurb}
-        </Text>
+      <Stack gap="lg" p="xl">
+        <div>
+          <Text size="xl" fw={600} lh={1.3} c="dark" style={{ letterSpacing: '-0.02em' }}>
+            {c.title}
+          </Text>
+        </div>
 
         <Box>
-          <Group justify="space-between" mb={6}>
+          <Group justify="space-between" mb={8}>
             <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.08em' }}>
               Droplets
             </Text>
@@ -101,7 +129,7 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
             </Text>
           </Group>
           <Progress value={supPct} size="xs" color="dark" styles={{ root: { backgroundColor: '#e9ecef' } }} />
-          <Group justify="space-between" mt={6} gap="xs">
+          <Group justify="space-between" mt={8} gap="xs">
             <Text size="xs" c="dimmed" fw={500}>
               {stage.label}
             </Text>
@@ -112,19 +140,18 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
         </Box>
 
         <Box
-          p="sm"
+          p="md"
           style={{
             backgroundColor: '#f8f9fa',
             border: '1px solid #e9ecef',
-            marginTop: 'auto',
           }}
         >
           <Group justify="space-between" align="flex-end" wrap="nowrap">
             <div>
-              <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.08em' }} mb={2}>
-                Prezzo
+              <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.08em' }} mb={4}>
+                Prezzo attuale
               </Text>
-              <Text size="xl" fw={600} c="dark" lh={1} style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+              <Text size="1.75rem" fw={600} c="dark" lh={1} style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
                 {formatEuro(c.current_price_cents, c.currency)}
               </Text>
             </div>
@@ -134,7 +161,20 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
               </Text>
             ) : null}
           </Group>
+          {savingsPct > 0 ? (
+            <Text size="xs" c="dimmed" mt={8} fw={500}>
+              Risparmi {formatEuro(Math.round(savings * 100), c.currency)} vs picco
+            </Text>
+          ) : (
+            <Text size="xs" c="dimmed" mt={8} fw={500}>
+              Prezzo al picco iniziale
+            </Text>
+          )}
         </Box>
+
+        <Text size="xs" c="dimmed" ta="right" fw={500}>
+          Obiettivo: {formatEuro(c.total_amount_cents, c.currency)}
+        </Text>
       </Stack>
     </Box>
   )

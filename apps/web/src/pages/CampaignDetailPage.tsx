@@ -4,11 +4,9 @@ import {
   Anchor,
   Badge,
   Box,
-  Breadcrumbs,
   Button,
-  Divider,
+  Grid,
   Group,
-  Paper,
   Skeleton,
   Stack,
   Table,
@@ -179,19 +177,19 @@ export default function CampaignDetailPage(): ReactElement {
       })
       const body = await res.json().catch(() => null)
       if (res.status === 401) {
-        setReserveMsg('Accedi per prenotare.')
+        setReserveMsg('Accedi per aggiungere un droplet.')
         return
       }
       if (res.status === 409) {
         const msg =
           typeof body === 'object' && body !== null && 'message' in body
             ? String((body as { message: string }).message)
-            : 'Non è stato possibile completare la prenotazione.'
+            : 'Non è stato possibile completare l\'operazione.'
         setReserveMsg(msg)
         return
       }
       if (res.status === 422) {
-        setReserveMsg('Errore di validazione (chiave idempotenza richiesta).')
+        setReserveMsg('Errore di validazione.')
         return
       }
       if (!res.ok) {
@@ -201,7 +199,7 @@ export default function CampaignDetailPage(): ReactElement {
       const json = body as ReservationWrapped
       setLastReservation(json.data)
       setReserveMsg(
-        `Prenotazione effettuata. Quota effettiva: ${formatEuro(json.data.effective_price_cents, campaign?.currency ?? 'EUR')}.`,
+        `Droplet aggiunto. Quota effettiva: ${formatEuro(json.data.effective_price_cents, campaign?.currency ?? 'EUR')}.`,
       )
       setReloadTick((t) => t + 1)
     } catch {
@@ -261,7 +259,7 @@ export default function CampaignDetailPage(): ReactElement {
   if (!campaign) {
     return (
       <Stack gap="md" py="md">
-        <Skeleton height={280} radius="lg" />
+        <Skeleton height={400} />
         <Skeleton height={24} width="40%" />
         <Skeleton height={120} />
         <Skeleton height={200} />
@@ -272,298 +270,375 @@ export default function CampaignDetailPage(): ReactElement {
   const s = encodeURIComponent(campaign.slug)
   const cat = campaignCategoryLabel(campaign.category)
   const costRows = [...(campaign.cost_items ?? [])].sort((a, b) => a.sort_order - b.sort_order)
-  const reserveOk = reserveMsg?.startsWith('Prenotazione effettuata') ?? false
+  const reserveOk = reserveMsg?.startsWith('Droplet aggiunto') ?? false
 
   return (
-    <Stack gap="xl" py={{ base: 'md', sm: 'lg' }} pb="xl">
-      <Breadcrumbs>
-        <Anchor component={Link} to="/campaigns" size="sm">
+    <Box py="md">
+      {/* Breadcrumb */}
+      <Group gap="xs" mb="lg">
+        <Anchor component={Link} to="/campaigns" size="sm" c="dimmed" fw={500}>
           Campagne
         </Anchor>
-        <Text size="sm" c="dimmed" lineClamp={1}>
+        <Text size="sm" c="dimmed">
+          /
+        </Text>
+        <Text size="sm" c="dark" fw={500} lineClamp={1}>
           {campaign.title}
         </Text>
-      </Breadcrumbs>
+      </Group>
 
-      <Paper withBorder radius="lg" shadow="sm" p={0} style={{ overflow: 'hidden' }}>
-        <Box pos="relative">
-          <CampaignCoverImage slug={campaign.slug} title={campaign.title} height={300} />
-          <Box
-            pos="absolute"
-            inset={0}
-            style={{
-              background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.35) 45%, transparent 72%)',
-              pointerEvents: 'none',
-            }}
-          />
-          <Stack
-            gap="sm"
-            pos="absolute"
-            left={0}
-            right={0}
-            bottom={0}
-            p={{ base: 'md', sm: 'xl' }}
-            style={{ pointerEvents: 'none' }}
-          >
-            <Group gap="xs" wrap="wrap">
-              <Badge variant="filled" color={campaignStatusBadgeColor(campaign.status)} size="lg" tt="none" fw={600}>
-                {campaignStatusLabel(campaign.status)}
-              </Badge>
-              {cat ? (
-                <Badge
-                  variant="outline"
-                  size="lg"
-                  tt="none"
-                  styles={{
-                    root: {
-                      borderColor: 'rgba(255,255,255,0.55)',
-                      color: 'white',
-                      backgroundColor: 'rgba(255,255,255,0.12)',
-                    },
-                  }}
-                >
-                  {cat}
-                </Badge>
-              ) : null}
-              <Text size="xs" c="white" opacity={0.9} fw={600} style={{ marginLeft: 'auto' }}>
-                {campaign.currency}
-              </Text>
-            </Group>
-            <Title order={2} c="white" style={{ letterSpacing: '-0.03em', textShadow: '0 2px 24px rgba(0,0,0,0.5)' }}>
-              {campaign.title}
-            </Title>
-          </Stack>
-        </Box>
-
-        <Stack gap="lg" p={{ base: 'md', sm: 'xl' }}>
-          {campaign.summary?.trim() ? (
-            <Text size="lg" c="dimmed" lh={1.6} fw={500}>
-              {campaign.summary.trim()}
-            </Text>
-          ) : null}
-
-          <CampaignGrowthPlant
-            progressPercent={supporterProgressPercent(campaign)}
-            variant="featured"
-            projectLabel="progetto"
-          />
-
-          <CampaignMetricsBlock c={campaign} />
-
-          {campaign.description?.trim() ? (
-            <>
-              <Divider label="Dettagli" labelPosition="left" />
-              <div>
-                <Title order={4} mb="sm" style={{ letterSpacing: '-0.02em' }}>
-                  Descrizione
+      <Grid gutter="xl">
+        {/* Colonna principale */}
+        <Grid.Col span={{ base: 12, md: 8 }}>
+          <Stack gap="xl">
+            {/* Hero image */}
+            <Box pos="relative" style={{ border: '1px solid #dee2e6' }}>
+              <CampaignCoverImage slug={campaign.slug} title={campaign.title} height={400} />
+              <Box
+                pos="absolute"
+                inset={0}
+                style={{
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)',
+                  pointerEvents: 'none',
+                }}
+              />
+              <Stack
+                gap="sm"
+                pos="absolute"
+                left={0}
+                right={0}
+                bottom={0}
+                p="xl"
+                style={{ pointerEvents: 'none' }}
+              >
+                <Group gap="xs" wrap="wrap">
+                  <Badge 
+                    variant="filled" 
+                    color={campaignStatusBadgeColor(campaign.status)} 
+                    size="sm" 
+                    tt="uppercase"
+                    style={{ fontWeight: 600, letterSpacing: '0.05em', fontSize: '0.65rem' }}
+                  >
+                    {campaignStatusLabel(campaign.status)}
+                  </Badge>
+                  {cat ? (
+                    <Badge
+                      variant="outline"
+                      size="sm"
+                      tt="uppercase"
+                      style={{
+                        borderColor: 'rgba(255,255,255,0.8)',
+                        color: 'white',
+                        backgroundColor: 'rgba(0,0,0,0.3)',
+                        fontWeight: 600,
+                        letterSpacing: '0.05em',
+                        fontSize: '0.65rem'
+                      }}
+                    >
+                      {cat}
+                    </Badge>
+                  ) : null}
+                  <Text size="xs" c="white" opacity={0.9} fw={600} style={{ marginLeft: 'auto' }}>
+                    {campaign.currency}
+                  </Text>
+                </Group>
+                <Title order={1} c="white" fw={600} style={{ letterSpacing: '-0.03em', textShadow: '0 2px 24px rgba(0,0,0,0.5)' }}>
+                  {campaign.title}
                 </Title>
+              </Stack>
+            </Box>
+
+            {/* Summary */}
+            {campaign.summary?.trim() ? (
+              <Text size="lg" c="dimmed" lh={1.7} fw={400}>
+                {campaign.summary.trim()}
+              </Text>
+            ) : null}
+
+            {/* Piantina */}
+            <CampaignGrowthPlant
+              progressPercent={supporterProgressPercent(campaign)}
+              variant="featured"
+              projectLabel="progetto"
+            />
+
+            {/* Descrizione */}
+            {campaign.description?.trim() ? (
+              <Box>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="sm">
+                  Descrizione
+                </Text>
                 <Text size="sm" c="dark" lh={1.75} style={{ whiteSpace: 'pre-wrap' }}>
                   {campaign.description.trim()}
                 </Text>
-              </div>
-            </>
-          ) : null}
+              </Box>
+            ) : null}
 
-          {costRows.length > 0 ? (
-            <>
-              <Divider label="Voci di costo" labelPosition="left" />
-              <Table striped highlightOnHover withTableBorder withColumnBorders>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Voce</Table.Th>
-                    <Table.Th style={{ textAlign: 'right', width: '9rem' }}>Importo</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {costRows.map((row) => (
-                    <Table.Tr key={row.id}>
-                      <Table.Td>{row.label}</Table.Td>
-                      <Table.Td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEuro(row.amount_cents, campaign.currency)}
-                      </Table.Td>
+            {/* Voci di costo */}
+            {costRows.length > 0 ? (
+              <Box>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="sm">
+                  Voci di costo
+                </Text>
+                <Table
+                  striped
+                  highlightOnHover
+                  style={{
+                    border: '1px solid #dee2e6',
+                  }}
+                  styles={{
+                    th: {
+                      backgroundColor: '#f8f9fa',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: '#495057',
+                    },
+                  }}
+                >
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Voce</Table.Th>
+                      <Table.Th style={{ textAlign: 'right', width: '9rem' }}>Importo</Table.Th>
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </>
-          ) : null}
-        </Stack>
-      </Paper>
-
-      {(isOwner || isBackoffice) && (
-        <Paper withBorder radius="lg" p={{ base: 'md', sm: 'lg' }} shadow="sm">
-          <Title order={4} mb="md" style={{ letterSpacing: '-0.02em' }}>
-            Gestione campagna
-          </Title>
-          <Stack gap="sm">
-            {isOwner && campaign.status === 'draft' ? (
-              <Button
-                type="button"
-                loading={lifecyclePending}
-                onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/submit-for-review`)}
-                variant="light"
-              >
-                Invia in revisione
-              </Button>
-            ) : null}
-            {isOwner && campaign.status === 'approved' ? (
-              <Button
-                type="button"
-                loading={lifecyclePending}
-                onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/publish`)}
-                color="teal"
-              >
-                Pubblica
-              </Button>
-            ) : null}
-            {isBackoffice && campaign.status === 'submitted_for_review' ? (
-              <Group gap="sm" wrap="wrap">
-                <Button
-                  type="button"
-                  loading={lifecyclePending}
-                  onClick={() => void runLifecycle(`/api/v1/backoffice/campaigns/${s}/approve`)}
-                  color="teal"
-                >
-                  Approva
-                </Button>
-                <Button
-                  type="button"
-                  loading={lifecyclePending}
-                  onClick={() => void runLifecycle(`/api/v1/backoffice/campaigns/${s}/reject`)}
-                  variant="outline"
-                  color="red"
-                >
-                  Rifiuta
-                </Button>
-              </Group>
-            ) : null}
-            {lifecycleMsg ? (
-              <Alert color={lifecycleMsg === LIFECYCLE_OK ? 'teal' : 'red'} variant="light">
-                {lifecycleMsg}
-              </Alert>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {costRows.map((row) => (
+                      <Table.Tr key={row.id}>
+                        <Table.Td style={{ fontWeight: 500 }}>{row.label}</Table.Td>
+                        <Table.Td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                          {formatEuro(row.amount_cents, campaign.currency)}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Box>
             ) : null}
           </Stack>
-        </Paper>
-      )}
+        </Grid.Col>
 
-      <Paper withBorder radius="lg" p={{ base: 'md', sm: 'lg' }} shadow="sm">
-        <Title order={4} mb="md" style={{ letterSpacing: '-0.02em' }}>
-          La tua partecipazione
-        </Title>
-        {user ? (
-          <Stack gap="md">
-            {canReserve ? (
-              <form onSubmit={(e) => void onReserve(e)}>
-                <Stack gap="sm" align="flex-start">
-                  <Button type="submit" loading={reservePending} color="teal" size="md">
-                    Prenota un posto
-                  </Button>
-                  {reserveMsg ? (
-                    <Alert color={reserveOk ? 'teal' : 'red'} variant="light">
-                      {reserveMsg}
-                    </Alert>
-                  ) : null}
-                </Stack>
-              </form>
-            ) : (
-              <Text size="sm" c="dimmed">
-                Le prenotazioni sono aperte quando la campagna è pubblicata o attiva.
-              </Text>
-            )}
+        {/* Sidebar destra */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Box
+            style={{
+              position: 'sticky',
+              top: 16,
+            }}
+          >
+            <Stack gap="lg">
+              {/* Metriche */}
+              <Box
+                p="lg"
+                style={{
+                  border: '1px solid #dee2e6',
+                  backgroundColor: '#f8f9fa',
+                }}
+              >
+                <CampaignMetricsBlock c={campaign} compact />
+              </Box>
 
-            {effectiveReservation ? (
-              <Stack gap="md" pt="sm">
-                <Divider />
-                <div>
-                  <Title order={5} mb="xs">
-                    Pagamento
-                  </Title>
-                  {paymentJustSucceeded ? (
-                    <Alert color="teal" mb="sm" title="Grazie!">
-                      Pagamento registrato correttamente.
-                    </Alert>
-                  ) : null}
-                  <Text size="sm" c="dimmed" mb="sm">
-                    Prenotazione #{effectiveReservation.id}
+              {/* Azioni utente */}
+              <Box
+                p="lg"
+                style={{
+                  border: '1px solid #dee2e6',
+                }}
+              >
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="md">
+                  Partecipa
+                </Text>
+                {user ? (
+                  <Stack gap="md">
+                    {canReserve ? (
+                      <form onSubmit={(e) => void onReserve(e)}>
+                        <Stack gap="sm">
+                          <Button 
+                            type="submit" 
+                            loading={reservePending} 
+                            color="dark" 
+                            size="md" 
+                            fullWidth
+                            style={{
+                              fontWeight: 600,
+                              letterSpacing: '0.02em',
+                              textTransform: 'uppercase',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            💧 Aggiungi droplet
+                          </Button>
+                          {reserveMsg ? (
+                            <Alert color={reserveOk ? 'teal' : 'red'} variant="light" p="sm">
+                              <Text size="xs">{reserveMsg}</Text>
+                            </Alert>
+                          ) : null}
+                        </Stack>
+                      </form>
+                    ) : (
+                      <Text size="sm" c="dimmed" fw={400}>
+                        I droplets sono aperti quando la campagna è pubblicata o attiva.
+                      </Text>
+                    )}
+
+                    {effectiveReservation ? (
+                      <Box pt="sm" style={{ borderTop: '1px solid #dee2e6' }}>
+                        <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="sm">
+                          Il tuo droplet
+                        </Text>
+                        <Text size="xs" c="dimmed" mb="sm">
+                          #{effectiveReservation.id}
+                        </Text>
+                        {effectiveReservation.status === 'converted_to_payment' ? (
+                          <Alert color="teal" variant="light" p="sm">
+                            <Text size="xs">Pagamento completato.</Text>
+                          </Alert>
+                        ) : effectiveReservation.status === 'failed' ? (
+                          <Alert color="red" variant="light" p="sm">
+                            <Text size="xs">Pagamento non riuscito.</Text>
+                          </Alert>
+                        ) : reservationNeedsPayment(effectiveReservation.status) ? (
+                          <Stack gap="sm">
+                            <Button
+                              type="button"
+                              onClick={() => void onPaymentIntent()}
+                              loading={payment === 'pending'}
+                              variant="outline"
+                              color="dark"
+                              size="sm"
+                              fullWidth
+                              style={{
+                                fontWeight: 600,
+                                letterSpacing: '0.02em',
+                                textTransform: 'uppercase',
+                                fontSize: '0.65rem'
+                              }}
+                            >
+                              Prepara pagamento
+                            </Button>
+                            {paymentMsg ? (
+                              <Alert
+                                color={
+                                  paymentMsg.includes('non riuscita') || paymentMsg.includes('Errore')
+                                    ? 'red'
+                                    : 'gray'
+                                }
+                                variant="light"
+                                p="sm"
+                              >
+                                <Text size="xs">{paymentMsg}</Text>
+                              </Alert>
+                            ) : null}
+                            {payment && payment !== 'pending' ? (
+                              <Stack gap="sm">
+                                <Text size="xs" c="dimmed">
+                                  Stato: <strong>{payment.status}</strong> — {formatEuro(payment.amount_cents, payment.currency)}
+                                </Text>
+                                <StripePaymentForm
+                                  payment={payment}
+                                  returnNextPath={`/campaigns/${encodeURIComponent(campaign.slug)}`}
+                                  onCompleted={() => {
+                                    setPaymentMsg('Pagamento inviato.')
+                                    setReloadTick((t) => t + 1)
+                                    window.setTimeout(() => setReloadTick((t) => t + 1), 1200)
+                                    navigate(`/campaigns/${encodeURIComponent(campaign.slug)}?payment=success`, {
+                                      replace: true,
+                                    })
+                                  }}
+                                />
+                              </Stack>
+                            ) : null}
+                          </Stack>
+                        ) : null}
+                      </Box>
+                    ) : null}
+                  </Stack>
+                ) : (
+                  <Text size="sm" fw={400}>
+                    <Anchor component={Link} to="/login" fw={600}>
+                      Accedi
+                    </Anchor>{' '}
+                    per aggiungere un droplet.
                   </Text>
-                  {effectiveReservation.status === 'converted_to_payment' ? (
-                    <Alert color="teal" variant="light">
-                      Pagamento completato per questa prenotazione.
-                    </Alert>
-                  ) : effectiveReservation.status === 'failed' ? (
-                    <Alert color="red" variant="light">
-                      Pagamento non riuscito. Puoi riprovare preparando di nuovo il pagamento.
-                    </Alert>
-                  ) : reservationNeedsPayment(effectiveReservation.status) ? (
-                    <>
+                )}
+              </Box>
+
+              {/* Gestione campagna (owner/backoffice) */}
+              {(isOwner || isBackoffice) && (
+                <Box
+                  p="lg"
+                  style={{
+                    border: '1px solid #dee2e6',
+                    backgroundColor: '#fff9e6',
+                  }}
+                >
+                  <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="md">
+                    Gestione
+                  </Text>
+                  <Stack gap="sm">
+                    {isOwner && campaign.status === 'draft' ? (
                       <Button
                         type="button"
-                        onClick={() => void onPaymentIntent()}
-                        loading={payment === 'pending'}
-                        mb="sm"
+                        loading={lifecyclePending}
+                        onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/submit-for-review`)}
+                        variant="outline"
+                        color="dark"
+                        size="sm"
+                        fullWidth
                       >
-                        Prepara pagamento
+                        Invia in revisione
                       </Button>
-                      {paymentMsg ? (
-                        <Alert
-                          mb="sm"
-                          color={
-                            paymentMsg.includes('non riuscita') || paymentMsg.includes('Errore di rete')
-                              ? 'red'
-                              : 'gray'
-                          }
-                          variant="light"
+                    ) : null}
+                    {isOwner && campaign.status === 'approved' ? (
+                      <Button
+                        type="button"
+                        loading={lifecyclePending}
+                        onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/publish`)}
+                        color="teal"
+                        size="sm"
+                        fullWidth
+                      >
+                        Pubblica
+                      </Button>
+                    ) : null}
+                    {isBackoffice && campaign.status === 'submitted_for_review' ? (
+                      <>
+                        <Button
+                          type="button"
+                          loading={lifecyclePending}
+                          onClick={() => void runLifecycle(`/api/v1/backoffice/campaigns/${s}/approve`)}
+                          color="teal"
+                          size="sm"
+                          fullWidth
                         >
-                          {paymentMsg}
-                        </Alert>
-                      ) : null}
-                      {payment && payment !== 'pending' ? (
-                        <Stack gap="sm">
-                          <Text size="sm" c="dimmed">
-                            Stato intent: <strong>{payment.status}</strong> —{' '}
-                            {formatEuro(payment.amount_cents, payment.currency)}
-                          </Text>
-                          <StripePaymentForm
-                            payment={payment}
-                            returnNextPath={`/campaigns/${encodeURIComponent(campaign.slug)}`}
-                            onCompleted={() => {
-                              setPaymentMsg('Pagamento inviato. Aggiornamento stato…')
-                              setReloadTick((t) => t + 1)
-                              window.setTimeout(() => setReloadTick((t) => t + 1), 1200)
-                              navigate(`/campaigns/${encodeURIComponent(campaign.slug)}?payment=success`, {
-                                replace: true,
-                              })
-                            }}
-                          />
-                        </Stack>
-                      ) : null}
-                    </>
-                  ) : (
-                    <Text size="sm" c="dimmed">
-                      Nessun pagamento richiesto per lo stato attuale della prenotazione.
-                    </Text>
-                  )}
-                </div>
-              </Stack>
-            ) : null}
-          </Stack>
-        ) : (
-          <Text size="sm">
-            <Anchor component={Link} to="/login" fw={600}>
-              Accedi
-            </Anchor>{' '}
-            per prenotare un posto.
-          </Text>
-        )}
-      </Paper>
-
-      {isOwner ? (
-        <Text size="xs" c="dimmed" ta="center">
-          <Anchor component={Link} to="/me/campaigns" size="xs">
-            Le mie campagne
-          </Anchor>
-        </Text>
-      ) : null}
-    </Stack>
+                          Approva
+                        </Button>
+                        <Button
+                          type="button"
+                          loading={lifecyclePending}
+                          onClick={() => void runLifecycle(`/api/v1/backoffice/campaigns/${s}/reject`)}
+                          variant="outline"
+                          color="red"
+                          size="sm"
+                          fullWidth
+                        >
+                          Rifiuta
+                        </Button>
+                      </>
+                    ) : null}
+                    {lifecycleMsg ? (
+                      <Alert color={lifecycleMsg === LIFECYCLE_OK ? 'teal' : 'red'} variant="light" p="sm">
+                        <Text size="xs">{lifecycleMsg}</Text>
+                      </Alert>
+                    ) : null}
+                  </Stack>
+                </Box>
+              )}
+            </Stack>
+          </Box>
+        </Grid.Col>
+      </Grid>
+    </Box>
   )
 }

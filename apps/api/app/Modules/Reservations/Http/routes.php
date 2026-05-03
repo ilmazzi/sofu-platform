@@ -13,4 +13,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::get('/me/reservations', [ReservationController::class, 'mine'])
         ->name('me.reservations.index');
+
+    Route::delete('/reservations/{reservation}', [ReservationController::class, 'destroy'])
+        ->name('reservations.destroy');
 });

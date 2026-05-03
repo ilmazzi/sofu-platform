@@ -25,21 +25,21 @@ export function CampaignMetricsBlock({ c, compact = false }: { c: Campaign; comp
 
   return (
     <div>
-      <Divider label="Comunità" labelPosition="left" />
+      <Divider label="Comunità 💧" labelPosition="left" />
       <div>
         <Group justify="space-between" gap="xs" mb={6} wrap="nowrap">
           <Text size="xs" fw={600} c="dimmed">
-            Sostenitori attivi
+            Droplets attivi
           </Text>
           <Text size="xs" fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
             {c.active_reservations_count} / {c.target_supporters}
           </Text>
         </Group>
-        <Progress value={supPct} size="sm" radius="xl" color="teal" aria-label="Avanzamento obiettivo persone" />
+        <Progress value={supPct} size="sm" radius="xl" color="teal" aria-label="Avanzamento obiettivo droplets" />
         <Text size="xs" c="dimmed" mt={6}>
           {supPct >= 100
-            ? 'Obiettivo persone raggiunto o superato.'
-            : `${Math.round(supPct)}% dell’obiettivo di partecipanti.`}
+            ? 'Obiettivo droplets raggiunto o superato.'
+            : `${Math.round(supPct)}% dell'obiettivo droplets.`}
         </Text>
       </div>
 
@@ -56,8 +56,8 @@ export function CampaignMetricsBlock({ c, compact = false }: { c: Campaign; comp
         <Progress value={pricePathPct} size="sm" radius="xl" color="orange" aria-label="Avvicinamento al prezzo minimo" />
         <Text size="xs" c="dimmed" mt={6}>
           {atFloor
-            ? 'Prezzo già al pavimento: non può scendere oltre.'
-            : 'Più persone entrano, più la quota si avvicina al minimo possibile.'}
+            ? 'Prezzo già al minimo: non può scendere oltre.'
+            : 'Più droplets si uniscono, più la quota si avvicina al minimo possibile.'}
         </Text>
       </div>
 
@@ -70,7 +70,7 @@ export function CampaignMetricsBlock({ c, compact = false }: { c: Campaign; comp
             {formatEuro(c.max_price_cents, c.currency)}
           </Text>
           <Text size="xs" c="dimmed" lh={1.2}>
-            primo posto
+            primo droplet
           </Text>
         </div>
         <div>
@@ -92,7 +92,7 @@ export function CampaignMetricsBlock({ c, compact = false }: { c: Campaign; comp
             {formatEuro(c.min_price_cents, c.currency)}
           </Text>
           <Text size="xs" c="dimmed" lh={1.2}>
-            pavimento
+            soglia minima
           </Text>
         </div>
       </SimpleGrid>
@@ -113,16 +113,16 @@ export function CampaignMetricsBlock({ c, compact = false }: { c: Campaign; comp
       <Text size={bodySm} c="dimmed" lh={compact ? 1.5 : 1.6} mt="md">
         {c.active_reservations_count === 0 ? (
           <>
-            <strong>Primo ingresso:</strong> con un solo sostenitore il prezzo è ancora al picco; ogni nuovo ingresso
+            <strong>Primo droplet:</strong> con un solo droplet il prezzo è ancora al picco; ogni nuovo droplet
             tende ad abbassare la quota per tutti i successivi (fino al minimo).
           </>
         ) : nextDrops ? (
           <>
-            <strong>Prossimo calo stimato:</strong> con un sostenitore in più la quota indicativa sarebbe circa{' '}
+            <strong>Prossimo calo stimato:</strong> con un droplet in più la quota indicativa sarebbe circa{' '}
             <Text span fw={700} c="dark">
               {formatEuro(nextCents, c.currency)}
             </Text>{' '}
-            (stesso obiettivo economico, più persone che lo ripartiscono).
+            (stesso obiettivo economico, più droplets che lo ripartiscono).
           </>
         ) : (
           <>
