@@ -36,7 +36,7 @@ class BackofficeUserController
         $user->role = $request->validated('role');
         $user->save();
 
-        $audit->log('user.role_updated', $user, [
+        $audit->record('user.role_updated', $request->user(), $user, [
             'old_role' => $oldRole,
             'new_role' => $user->role,
         ]);

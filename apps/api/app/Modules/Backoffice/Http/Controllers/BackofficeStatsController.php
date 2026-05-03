@@ -4,7 +4,9 @@ namespace App\Modules\Backoffice\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\Backoffice\Http\Requests\BackofficeRequest;
+use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Modules\Reservations\Domain\Enums\ReservationStatus;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use Illuminate\Http\JsonResponse;
 
@@ -14,10 +16,22 @@ class BackofficeStatsController
     {
         $totalUsers = User::count();
         $totalCampaigns = Campaign::count();
-        $totalReservations = Reservation::where('status', 'confirmed')->count();
-        $totalRevenueCents = Reservation::where('status', 'confirmed')->sum('amount_cents');
-        $campaignsInReview = Campaign::where('status', 'in_review')->count();
-        $campaignsPublished = Campaign::where('status', 'published')->count();
+        $totalReservations = Reservation::query()
+            ->whereNotIn('status', [
+                ReservationStatus::Cancelled,
+                ReservationStatus::Expired,
+                ReservationStatus::Failed,
+            ])
+            ->count();
+        $totalRevenueCents = (int) Reservation::query()
+            ->where('status', ReservationStatus::ConvertedToPayment)
+            ->sum('effective_price_cents');
+        $campaignsInReview = Campaign::query()
+            ->where('status', CampaignStatus::SubmittedForReview)
+            ->count();
+        $campaignsPublished = Campaign::query()
+            ->where('status', CampaignStatus::Published)
+            ->count();
 
         return response()->json([
             'total_users' => $totalUsers,

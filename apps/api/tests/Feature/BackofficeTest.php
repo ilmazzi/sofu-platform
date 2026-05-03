@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Modules\Reservations\Domain\Enums\ReservationStatus;
+use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -85,6 +87,32 @@ class BackofficeTest extends TestCase
             ->assertJsonPath('data.slug', 'operational-detail')
             ->assertJsonPath('data.creator.email', $creator->email)
             ->assertJsonPath('data.audit_logs.0.action', 'campaign.submitted_for_review');
+    }
+
+    public function test_operator_dashboard_stats_use_domain_enums(): void
+    {
+        Campaign::factory()->create(['status' => CampaignStatus::SubmittedForReview]);
+        Campaign::factory()->create(['status' => CampaignStatus::Published]);
+
+        $campaign = Campaign::factory()->published()->create();
+        $supporter = User::factory()->create();
+        Reservation::query()->create([
+            'campaign_id' => $campaign->id,
+            'supporter_id' => $supporter->id,
+            'status' => ReservationStatus::ConvertedToPayment,
+            'price_quoted_cents' => 1000,
+            'effective_price_cents' => 950,
+            'idempotency_key' => 'stats-test-1',
+            'payload_hash' => hash('sha256', 'stats-test'),
+        ]);
+
+        $this
+            ->actingAs(User::factory()->operator()->create())
+            ->getJson('/api/v1/backoffice/stats')
+            ->assertOk()
+            ->assertJsonPath('campaigns_in_review', 1)
+            ->assertJsonPath('campaigns_published', 2) // one standalone published + reservation campaign
+            ->assertJsonPath('total_revenue_cents', 950);
     }
 
     public function test_operator_can_filter_audit_logs(): void
