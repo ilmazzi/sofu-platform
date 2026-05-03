@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { Badge, Box, Button, Group, Paper, Select, Skeleton, Stack, Table, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Badge, Box, Button, Group, Paper, Select, Skeleton, Stack, Table, Text, TextInput, Title } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api/client'
@@ -45,19 +45,43 @@ export default function BackofficeUsersPage(): ReactElement {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<User[] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [editingUserId, setEditingUserId] = useState<number | null>(null)
   const [newRole, setNewRole] = useState<string>('')
 
   const loadUsers = async () => {
+    setLoadError(null)
+    setLoading(true)
     try {
       const res = await apiFetch('/api/v1/backoffice/users')
-      if (res.ok) {
-        const json = (await res.json()) as Paginated
-        setUsers(json.data)
+      const bodyText = await res.text()
+      if (!res.ok) {
+        setUsers([])
+        const hint =
+          res.status === 401 || res.status === 419
+            ? ' Sessione non valida: effettua di nuovo il login.'
+            : res.status === 403
+              ? ' Il tuo account non ha permessi backoffice.'
+              : ''
+        setLoadError(`Impossibile caricare gli utenti (${res.status}).${hint}`)
+        return
       }
+      let json: Paginated
+      try {
+        json = JSON.parse(bodyText) as Paginated
+      } catch {
+        setUsers([])
+        setLoadError('Risposta API non valida (JSON atteso con campo data).')
+        return
+      }
+      const rows = Array.isArray(json.data) ? json.data : []
+      setUsers(rows)
     } catch {
-      // ignore
+      setUsers([])
+      setLoadError(
+        'Errore di rete o richiesta bloccata (CORS). In produzione verifica VITE_API_URL, CORS_ALLOWED_ORIGINS e SANCTUM_STATEFUL_DOMAINS sul server.',
+      )
     } finally {
       setLoading(false)
     }
@@ -111,6 +135,12 @@ export default function BackofficeUsersPage(): ReactElement {
           Visualizza e modifica i ruoli degli utenti
         </Text>
       </Box>
+
+      {loadError ? (
+        <Alert color="red" title="Caricamento utenti" variant="light">
+          {loadError}
+        </Alert>
+      ) : null}
 
       <TextInput
         placeholder="Cerca per nome, email o ruolo..."
@@ -246,7 +276,7 @@ export default function BackofficeUsersPage(): ReactElement {
               <Table.Tr>
                 <Table.Td colSpan={7}>
                   <Text ta="center" c="dimmed" py="xl">
-                    Nessun utente trovato
+                    {loadError ? '—' : 'Nessun utente trovato'}
                   </Text>
                 </Table.Td>
               </Table.Tr>
