@@ -5,6 +5,7 @@ namespace App\Modules\Campaigns\Application;
 use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -55,7 +56,7 @@ class CreateCampaignAction
                 ]);
             }
 
-            $this->audit->record('campaign.created', $creator, $campaign, [
+            $this->audit->record(AuditActions::CAMPAIGN_CREATED, $creator, $campaign, [
                 'status' => CampaignStatus::Draft->value,
                 'total_amount_cents' => $campaign->total_amount_cents,
                 'currency' => $campaign->currency,

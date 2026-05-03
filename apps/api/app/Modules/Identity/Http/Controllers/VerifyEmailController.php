@@ -3,6 +3,7 @@
 namespace App\Modules\Identity\Http\Controllers;
 
 use App\Models\User;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,7 @@ class VerifyEmailController
             $user->markEmailAsVerified();
             event(new Verified($user));
 
-            $audit->record('identity.email_verified', $user, $user);
+            $audit->record(AuditActions::IDENTITY_EMAIL_VERIFIED, $user, $user);
         }
 
         return response()->json(['message' => 'Email verified.']);

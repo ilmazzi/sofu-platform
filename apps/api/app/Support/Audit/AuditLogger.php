@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\App;
 class AuditLogger
 {
     /**
+     * @param  non-empty-string  $action  Prefer {@see AuditActions} constants.
      * @param  array<string, mixed>  $metadata
      */
     public function record(string $action, ?Model $actor = null, ?Model $target = null, array $metadata = []): AuditLog

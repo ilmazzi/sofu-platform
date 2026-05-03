@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
+use App\Support\Audit\AuditActions;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -216,7 +217,7 @@ class ReservationsTest extends TestCase
             'reason' => 'reservation_cancelled',
         ]);
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'reservation.cancelled',
+            'action' => AuditActions::RESERVATION_CANCELLED,
             'target_id' => $reservation->id,
         ]);
     }

@@ -5,6 +5,7 @@ namespace App\Modules\Payments\Application;
 use App\Modules\Payments\Domain\Enums\PaymentStatus;
 use App\Modules\Payments\Infrastructure\Eloquent\Payment;
 use App\Modules\Payments\Infrastructure\Eloquent\PaymentProviderEvent;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -97,10 +98,10 @@ class ProcessMockPaymentWebhookAction
     private function auditAction(PaymentStatus $status): string
     {
         return match ($status) {
-            PaymentStatus::Authorized => 'payment.authorized',
-            PaymentStatus::Captured => 'payment.captured',
-            PaymentStatus::Failed => 'payment.failed',
-            default => 'payment.updated',
+            PaymentStatus::Authorized => AuditActions::PAYMENT_AUTHORIZED,
+            PaymentStatus::Captured => AuditActions::PAYMENT_CAPTURED,
+            PaymentStatus::Failed => AuditActions::PAYMENT_FAILED,
+            default => AuditActions::PAYMENT_UPDATED,
         };
     }
 }

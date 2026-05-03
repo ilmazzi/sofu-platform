@@ -10,6 +10,7 @@ use App\Modules\Notifications\Infrastructure\Notifications\CampaignApprovedNotif
 use App\Modules\Notifications\Infrastructure\Notifications\CampaignPublishedNotification;
 use App\Modules\Notifications\Infrastructure\Notifications\CampaignRejectedNotification;
 use App\Modules\Notifications\Infrastructure\Notifications\CampaignSubmittedForReviewNotification;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -85,17 +86,17 @@ class TransitionCampaignStatusAction
     private function auditAction(CampaignStatus $to): string
     {
         return match ($to) {
-            CampaignStatus::SubmittedForReview => 'campaign.submitted_for_review',
-            CampaignStatus::Approved => 'campaign.approved',
-            CampaignStatus::Rejected => 'campaign.rejected',
-            CampaignStatus::Published => 'campaign.published',
-            CampaignStatus::Activated => 'campaign.activated',
-            CampaignStatus::Successful => 'campaign.successful',
-            CampaignStatus::Closed => 'campaign.closed',
-            CampaignStatus::Cancelled => 'campaign.cancelled',
-            CampaignStatus::Expired => 'campaign.expired',
-            CampaignStatus::Failed => 'campaign.failed',
-            default => 'campaign.status_changed',
+            CampaignStatus::SubmittedForReview => AuditActions::CAMPAIGN_SUBMITTED_FOR_REVIEW,
+            CampaignStatus::Approved => AuditActions::CAMPAIGN_APPROVED,
+            CampaignStatus::Rejected => AuditActions::CAMPAIGN_REJECTED,
+            CampaignStatus::Published => AuditActions::CAMPAIGN_PUBLISHED,
+            CampaignStatus::Activated => AuditActions::CAMPAIGN_ACTIVATED,
+            CampaignStatus::Successful => AuditActions::CAMPAIGN_SUCCESSFUL,
+            CampaignStatus::Closed => AuditActions::CAMPAIGN_CLOSED,
+            CampaignStatus::Cancelled => AuditActions::CAMPAIGN_CANCELLED,
+            CampaignStatus::Expired => AuditActions::CAMPAIGN_EXPIRED,
+            CampaignStatus::Failed => AuditActions::CAMPAIGN_FAILED,
+            default => AuditActions::CAMPAIGN_STATUS_CHANGED,
         };
     }
 }

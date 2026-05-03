@@ -1132,6 +1132,160 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/backoffice/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard KPI aggregates (plain JSON, no `data` wrapper) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BackofficeDashboardStats"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backoffice/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users (filters) */
+        get: {
+            parameters: {
+                query?: {
+                    role?: "supporter" | "creator" | "operator" | "admin";
+                    search?: string;
+                    per_page?: components["parameters"]["PerPage"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PaginatedBackofficeUsers"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backoffice/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** User detail (backoffice) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["UserId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BackofficeUserWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update user role */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["UserId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        role: "supporter" | "creator" | "operator" | "admin";
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BackofficeUserWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                422: components["responses"]["ValidationError"];
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1365,6 +1519,29 @@ export interface components {
             email: string;
             role: string;
         };
+        BackofficeDashboardStats: {
+            total_users: number;
+            total_campaigns: number;
+            total_reservations: number;
+            total_revenue_cents: number;
+            campaigns_in_review: number;
+            campaigns_published: number;
+        };
+        BackofficeUser: {
+            id: number;
+            name: string;
+            email: string;
+            role: string;
+            /** Format: date-time */
+            email_verified_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        BackofficeUserWrapped: {
+            data: components["schemas"]["BackofficeUser"];
+        };
         BackofficeCampaign: components["schemas"]["Campaign"] & {
             creator?: components["schemas"]["BackofficeUserEmbed"];
             audit_logs?: components["schemas"]["AuditLog"][];
@@ -1433,6 +1610,11 @@ export interface components {
             links: components["schemas"]["PaginationLinks"];
             meta: components["schemas"]["PaginationMeta"];
         };
+        PaginatedBackofficeUsers: {
+            data: components["schemas"]["BackofficeUser"][];
+            links: components["schemas"]["PaginationLinks"];
+            meta: components["schemas"]["PaginationMeta"];
+        };
         PaginatedAuditLogs: {
             data: components["schemas"]["AuditLog"][];
             links: components["schemas"]["PaginationLinks"];
@@ -1489,6 +1671,7 @@ export interface components {
         CampaignSlug: string;
         Page: number;
         PerPage: number;
+        UserId: number;
         IdempotencyKey: string;
     };
     requestBodies: never;

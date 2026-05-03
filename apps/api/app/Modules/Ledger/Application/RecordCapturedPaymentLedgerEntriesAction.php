@@ -6,6 +6,7 @@ use App\Modules\Ledger\Domain\Enums\LedgerEntryDirection;
 use App\Modules\Ledger\Domain\LedgerAccounts;
 use App\Modules\Ledger\Infrastructure\Eloquent\LedgerEntry;
 use App\Modules\Payments\Infrastructure\Eloquent\Payment;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 
 class RecordCapturedPaymentLedgerEntriesAction
@@ -47,7 +48,7 @@ class RecordCapturedPaymentLedgerEntriesAction
         ]);
         $this->entry(LedgerAccounts::creatorPayable($creatorId), LedgerEntryDirection::Credit, $creatorPayableCents, $payment, $metadata);
 
-        $this->audit->record('ledger.entries_recorded', null, $payment, [
+        $this->audit->record(AuditActions::LEDGER_ENTRIES_RECORDED, null, $payment, [
             'gross_amount_cents' => $grossAmountCents,
             'provider_fee_cents' => $providerFeeCents,
             'sofu_fee_cents' => $sofuFeeCents,

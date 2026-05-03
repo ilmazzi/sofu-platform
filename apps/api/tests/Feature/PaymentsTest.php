@@ -8,6 +8,7 @@ use App\Modules\Payments\Domain\Enums\PaymentStatus;
 use App\Modules\Payments\Infrastructure\Eloquent\Payment;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
+use App\Support\Audit\AuditActions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -36,7 +37,7 @@ class PaymentsTest extends TestCase
             'amount_cents' => $reservation->effective_price_cents,
         ]);
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'payment.intent_created',
+            'action' => AuditActions::PAYMENT_INTENT_CREATED,
         ]);
     }
 
@@ -94,7 +95,7 @@ class PaymentsTest extends TestCase
         ]);
         $this->assertDatabaseCount('payment_provider_events', 1);
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'payment.authorized',
+            'action' => AuditActions::PAYMENT_AUTHORIZED,
             'target_id' => $payment->id,
         ]);
     }

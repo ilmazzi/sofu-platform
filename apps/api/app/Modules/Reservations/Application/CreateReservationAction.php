@@ -10,6 +10,7 @@ use App\Modules\Pricing\Domain\CampaignPriceCalculator;
 use App\Modules\Pricing\Infrastructure\Eloquent\CampaignPriceSnapshot;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -98,13 +99,13 @@ class CreateReservationAction
                 'current_price_cents' => $effectivePriceCents,
             ])->save();
 
-            $this->audit->record('reservation.created', $supporter, $reservation, [
+            $this->audit->record(AuditActions::RESERVATION_CREATED, $supporter, $reservation, [
                 'campaign_id' => $lockedCampaign->id,
                 'price_quoted_cents' => $priceQuotedCents,
                 'effective_price_cents' => $effectivePriceCents,
             ]);
 
-            $this->audit->record('campaign.price_changed', $supporter, $lockedCampaign, [
+            $this->audit->record(AuditActions::CAMPAIGN_PRICE_CHANGED, $supporter, $lockedCampaign, [
                 'active_reservations_count' => $activeReservationsCount,
                 'previous_price_cents' => $priceQuotedCents,
                 'current_price_cents' => $effectivePriceCents,

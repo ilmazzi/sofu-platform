@@ -9,6 +9,7 @@ use App\Modules\Identity\Http\Requests\RegisterRequest;
 use App\Modules\Identity\Http\Requests\ResetPasswordRequest;
 use App\Modules\Identity\Http\Requests\UpdatePasswordRequest;
 use App\Modules\Identity\Http\Resources\UserResource;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
@@ -37,7 +38,7 @@ class AuthController
         Auth::login($user);
         $request->session()->regenerate();
 
-        $audit->record('identity.registered', $user, $user);
+        $audit->record(AuditActions::IDENTITY_REGISTERED, $user, $user);
 
         return UserResource::make($user);
     }
@@ -52,7 +53,7 @@ class AuthController
 
         $request->session()->regenerate();
 
-        $audit->record('identity.logged_in', $request->user(), $request->user());
+        $audit->record(AuditActions::IDENTITY_LOGGED_IN, $request->user(), $request->user());
 
         return UserResource::make($request->user());
     }
@@ -66,7 +67,7 @@ class AuthController
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        $audit->record('identity.logged_out', $user, $user);
+        $audit->record(AuditActions::IDENTITY_LOGGED_OUT, $user, $user);
 
         return response()->json(['message' => 'Logged out.']);
     }
@@ -75,7 +76,7 @@ class AuthController
     {
         Password::sendResetLink($request->only('email'));
 
-        $audit->record('identity.password_reset_requested', metadata: [
+        $audit->record(AuditActions::IDENTITY_PASSWORD_RESET_REQUESTED, metadata: [
             'email_hash' => hash('sha256', $request->validated('email')),
         ]);
 
@@ -107,7 +108,7 @@ class AuthController
             ]);
         }
 
-        $audit->record('identity.password_reset_completed', $resetUser, $resetUser);
+        $audit->record(AuditActions::IDENTITY_PASSWORD_RESET_COMPLETED, $resetUser, $resetUser);
 
         return response()->json(['message' => __($status)]);
     }
@@ -119,7 +120,7 @@ class AuthController
             'remember_token' => Str::random(60),
         ])->save();
 
-        $audit->record('identity.password_updated', $request->user(), $request->user());
+        $audit->record(AuditActions::IDENTITY_PASSWORD_UPDATED, $request->user(), $request->user());
 
         return response()->json(['message' => 'Password updated.']);
     }
@@ -132,7 +133,7 @@ class AuthController
 
         $request->user()->sendEmailVerificationNotification();
 
-        $audit->record('identity.email_verification_requested', $request->user(), $request->user());
+        $audit->record(AuditActions::IDENTITY_EMAIL_VERIFICATION_REQUESTED, $request->user(), $request->user());
 
         return response()->json(['message' => 'Verification link sent.'], 202);
     }

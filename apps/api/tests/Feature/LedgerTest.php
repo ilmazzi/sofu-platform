@@ -8,6 +8,7 @@ use App\Modules\Ledger\Domain\LedgerAccounts;
 use App\Modules\Payments\Domain\Enums\PaymentStatus;
 use App\Modules\Payments\Infrastructure\Eloquent\Payment;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
+use App\Support\Audit\AuditActions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -54,7 +55,7 @@ class LedgerTest extends TestCase
             'source_id' => $payment->id,
         ]);
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'ledger.entries_recorded',
+            'action' => AuditActions::LEDGER_ENTRIES_RECORDED,
             'target_id' => $payment->id,
         ]);
     }

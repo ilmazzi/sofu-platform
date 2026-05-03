@@ -7,6 +7,7 @@ use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -75,7 +76,7 @@ class BackofficeTest extends TestCase
             'status' => CampaignStatus::SubmittedForReview,
         ]);
 
-        app(AuditLogger::class)->record('campaign.submitted_for_review', $creator, $campaign, [
+        app(AuditLogger::class)->record(AuditActions::CAMPAIGN_SUBMITTED_FOR_REVIEW, $creator, $campaign, [
             'from' => 'draft',
             'to' => 'submitted_for_review',
         ]);
@@ -86,7 +87,7 @@ class BackofficeTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.slug', 'operational-detail')
             ->assertJsonPath('data.creator.email', $creator->email)
-            ->assertJsonPath('data.audit_logs.0.action', 'campaign.submitted_for_review');
+            ->assertJsonPath('data.audit_logs.0.action', AuditActions::CAMPAIGN_SUBMITTED_FOR_REVIEW);
     }
 
     public function test_operator_dashboard_stats_use_domain_enums(): void
@@ -120,15 +121,15 @@ class BackofficeTest extends TestCase
         $creator = User::factory()->creator()->create();
         $campaign = Campaign::factory()->create(['creator_id' => $creator->id]);
 
-        app(AuditLogger::class)->record('campaign.created', $creator, $campaign);
-        app(AuditLogger::class)->record('identity.logged_in', $creator, $creator);
+        app(AuditLogger::class)->record(AuditActions::CAMPAIGN_CREATED, $creator, $campaign);
+        app(AuditLogger::class)->record(AuditActions::IDENTITY_LOGGED_IN, $creator, $creator);
 
         $this
             ->actingAs(User::factory()->operator()->create())
-            ->getJson('/api/v1/backoffice/audit-logs?action=campaign.created')
+            ->getJson('/api/v1/backoffice/audit-logs?action='.urlencode(AuditActions::CAMPAIGN_CREATED))
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.action', 'campaign.created')
+            ->assertJsonPath('data.0.action', AuditActions::CAMPAIGN_CREATED)
             ->assertJsonPath('data.0.target_id', (string) $campaign->id);
     }
 }

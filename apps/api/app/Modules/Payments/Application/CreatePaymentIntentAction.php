@@ -6,6 +6,7 @@ use App\Modules\Payments\Domain\Contracts\PaymentProvider;
 use App\Modules\Payments\Domain\Enums\PaymentStatus;
 use App\Modules\Payments\Infrastructure\Eloquent\Payment;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -42,7 +43,7 @@ class CreatePaymentIntentAction
                 'client_secret' => $intent->clientSecret,
             ]);
 
-            $this->audit->record('payment.intent_created', $reservation->supporter, $payment, [
+            $this->audit->record(AuditActions::PAYMENT_INTENT_CREATED, $reservation->supporter, $payment, [
                 'reservation_id' => $reservation->id,
                 'provider' => $payment->provider,
                 'amount_cents' => $payment->amount_cents,

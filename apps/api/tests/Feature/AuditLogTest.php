@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Support\Audit\AuditActions;
+use App\Support\Audit\AuditLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -31,7 +33,7 @@ class AuditLogTest extends TestCase
             ->assertHeader('X-Request-Id', 'req_test_123');
 
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'identity.registered',
+            'action' => AuditActions::IDENTITY_REGISTERED,
             'request_id' => 'req_test_123',
         ]);
     }
@@ -62,16 +64,18 @@ class AuditLogTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'identity.password_reset_requested',
+            'action' => AuditActions::IDENTITY_PASSWORD_RESET_REQUESTED,
         ]);
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'identity.password_reset_completed',
+            'action' => AuditActions::IDENTITY_PASSWORD_RESET_COMPLETED,
             'target_id' => $user->id,
         ]);
 
-        $this->assertDatabaseMissing('audit_logs', [
-            'metadata' => $token,
-        ]);
+        $requested = AuditLog::query()->where('action', AuditActions::IDENTITY_PASSWORD_RESET_REQUESTED)->first();
+        $this->assertNotNull($requested);
+        $this->assertIsArray($requested->metadata);
+        $this->assertArrayHasKey('email_hash', $requested->metadata);
+        $this->assertStringNotContainsString($token, json_encode($requested->metadata, JSON_THROW_ON_ERROR));
     }
 
     public function test_campaign_lifecycle_actions_are_audited(): void
@@ -94,12 +98,12 @@ class AuditLogTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'campaign.submitted_for_review',
+            'action' => AuditActions::CAMPAIGN_SUBMITTED_FOR_REVIEW,
             'actor_id' => $creator->id,
             'target_id' => $campaign->id,
         ]);
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'campaign.approved',
+            'action' => AuditActions::CAMPAIGN_APPROVED,
             'actor_id' => $operator->id,
             'target_id' => $campaign->id,
         ]);
@@ -122,11 +126,11 @@ class AuditLogTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'reservation.created',
+            'action' => AuditActions::RESERVATION_CREATED,
             'actor_id' => $supporter->id,
         ]);
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'campaign.price_changed',
+            'action' => AuditActions::CAMPAIGN_PRICE_CHANGED,
             'target_id' => $campaign->id,
         ]);
     }

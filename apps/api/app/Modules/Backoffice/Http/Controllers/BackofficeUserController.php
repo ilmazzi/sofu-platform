@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Backoffice\Http\Requests\BackofficeUserIndexRequest;
 use App\Modules\Backoffice\Http\Requests\BackofficeUserUpdateRequest;
 use App\Modules\Backoffice\Http\Resources\BackofficeUserResource;
+use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -36,7 +37,7 @@ class BackofficeUserController
         $user->role = $request->validated('role');
         $user->save();
 
-        $audit->record('user.role_updated', $request->user(), $user, [
+        $audit->record(AuditActions::USER_ROLE_UPDATED, $request->user(), $user, [
             'old_role' => $oldRole,
             'new_role' => $user->role,
         ]);
