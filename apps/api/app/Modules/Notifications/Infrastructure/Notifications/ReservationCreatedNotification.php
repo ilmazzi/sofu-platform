@@ -35,10 +35,10 @@ class ReservationCreatedNotification extends Notification implements ShouldQueue
         $currency = $campaign->currency;
 
         return (new MailMessage)
-            ->subject('Prenotazione confermata — '.$title)
+            ->subject('Droplet confermato — '.$title)
             ->greeting('Ciao '.$notifiable->name.',')
-            ->line('Hai confermato la tua prenotazione per la campagna «'.$title.'».')
-            ->line('Prezzo effettivo al momento della prenotazione: '.$effective.' '.$currency.'.')
+            ->line('Hai confermato il tuo droplet per la campagna «'.$title.'».')
+            ->line('Prezzo effettivo alla creazione del droplet: '.$effective.' '.$currency.'.')
             ->action('Apri la campagna', FrontendUrl::to('/campaigns/'.$slug))
             ->line('Completa il pagamento dalla pagina della campagna quando sei pronto.');
     }

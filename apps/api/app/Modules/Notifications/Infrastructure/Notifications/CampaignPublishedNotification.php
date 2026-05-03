@@ -30,7 +30,7 @@ class CampaignPublishedNotification extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject('Campagna pubblicata — '.$this->campaign->title)
             ->greeting('Ciao '.$notifiable->name.',')
-            ->line('La tua campagna «'.$this->campaign->title.'» è ora pubblica e può ricevere prenotazioni.')
+            ->line('La tua campagna «'.$this->campaign->title.'» è ora pubblica: i sostenitori possono aggiungere droplets.')
             ->action('Vedi la pagina pubblica', FrontendUrl::to('/campaigns/'.$this->campaign->slug));
     }
 }

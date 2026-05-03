@@ -33,9 +33,9 @@ class ReservationCancelledNotification extends Notification implements ShouldQue
         $title = $campaign->title;
 
         return (new MailMessage)
-            ->subject('Prenotazione cancellata — '.$title)
+            ->subject('Droplet cancellato — '.$title)
             ->greeting('Ciao '.$notifiable->name.',')
-            ->line('La tua prenotazione per la campagna «'.$title.'» è stata cancellata.')
+            ->line('Il tuo droplet per la campagna «'.$title.'» è stato cancellato.')
             ->action('Apri la campagna', FrontendUrl::to('/campaigns/'.$slug));
     }
 }

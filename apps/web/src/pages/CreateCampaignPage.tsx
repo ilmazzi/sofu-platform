@@ -314,7 +314,7 @@ export default function CreateCampaignPage(): ReactElement {
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             <NumberInput
               label="Prezzo minimo (centesimi)"
-              description="Quota pavimento per partecipante."
+              description="Quota minima per partecipante (prezzo di partenza della quota dinamica)."
               value={minPriceCents}
               onChange={(v) => setMinPriceCents(v ?? '')}
               min={1}

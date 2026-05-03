@@ -115,7 +115,7 @@ export function HomeHero({
           {!authLoading && user ? (
             <Text size="sm" c="rgba(255,255,255,0.95)" lh={1.6} style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
               Bentornato, <strong>{user.name}</strong>. I tuoi droplets sono in{' '}
-              <HeroLink to="/me/reservations">Le mie prenotazioni</HeroLink>.
+              <HeroLink to="/me/reservations">I miei droplets</HeroLink>.
             </Text>
           ) : null}
           <Text size="xs" c="rgba(255,255,255,0.5)" mt="xs">

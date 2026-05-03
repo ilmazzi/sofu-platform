@@ -77,11 +77,11 @@ export default function MyReservationsPage(): ReactElement {
         const json = parseJson(raw) as Paginated | null
         if (cancelled) return
         if (res.status === 401) {
-          setError('Accedi per vedere le tue prenotazioni.')
+          setError('Accedi per vedere i tuoi droplets.')
           return
         }
         if (!res.ok || !json?.data) {
-          setError(`Impossibile caricare le prenotazioni (${res.status}).`)
+          setError(`Impossibile caricare i droplets (${res.status}).`)
           return
         }
         setRows(json.data)
@@ -145,9 +145,9 @@ export default function MyReservationsPage(): ReactElement {
       <Stack gap="lg" py="md">
         <Card withBorder padding="xl" radius="lg" shadow="sm">
           <Stack gap="md" maw={480}>
-            <Title order={3}>Le tue prenotazioni</Title>
+            <Title order={3}>I tuoi droplets</Title>
             <Text c="dimmed" lh={1.6}>
-              Accedi per vedere le campagne a cui ti sei iscritto, lo stato del pagamento e completare eventuali quote
+              Accedi per vedere le campagne in cui hai un droplet, lo stato del pagamento e completare eventuali quote
               ancora da saldare.
             </Text>
             <Button component={Link} to="/login" color="teal" w="fit-content">
@@ -191,7 +191,7 @@ export default function MyReservationsPage(): ReactElement {
       <Group justify="space-between" align="flex-start" wrap="wrap" gap="md">
         <Stack gap="xs">
           <Title order={2} style={{ letterSpacing: '-0.03em' }}>
-            Le mie prenotazioni
+            I miei droplets
           </Title>
           <Text c="dimmed" maw={560} lh={1.65}>
             Stato delle quote, importi effettivi e pagamento. Dopo un pagamento andato a buon fine lo stato si aggiorna
@@ -215,9 +215,9 @@ export default function MyReservationsPage(): ReactElement {
             <Text size="3rem" aria-hidden>
               ✦
             </Text>
-            <Title order={3}>Nessuna prenotazione</Title>
+            <Title order={3}>Nessun droplet</Title>
             <Text c="dimmed" lh={1.6}>
-              Esplora le campagne pubbliche e prenota un posto: qui troverai riepilogo, importo e link per il
+              Esplora le campagne pubbliche e aggiungi un droplet: qui troverai riepilogo, importo e link per il
               pagamento.
             </Text>
             <Button component={Link} to="/campaigns" color="teal" size="md">
@@ -264,7 +264,7 @@ export default function MyReservationsPage(): ReactElement {
 
                     {r.status === 'converted_to_payment' ? (
                       <Alert color="teal" variant="light">
-                        Pagamento completato per questa prenotazione.
+                        Pagamento completato per questo droplet.
                       </Alert>
                     ) : r.status === 'failed' ? (
                       <Alert color="red" variant="light">

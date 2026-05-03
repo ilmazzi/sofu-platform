@@ -90,7 +90,7 @@ class DatabaseSeeder extends Seeder
             [
                 'creator_id' => $creator->id,
                 'title' => 'Campagna pubblica (seed)',
-                'summary' => 'Pubblicata per test prenotazioni.',
+                'summary' => 'Pubblicata per test droplets.',
                 'description' => str_repeat('Descrizione campagna pubblica di seed per test end-to-end. ', 2),
                 'category' => 'community',
                 'status' => CampaignStatus::Published,

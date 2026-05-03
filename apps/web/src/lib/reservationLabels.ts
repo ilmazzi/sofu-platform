@@ -1,4 +1,4 @@
-/** Etichette italiane per lo stato prenotazione (API). */
+/** Etichette italiane per lo stato del droplet / reservation (API). */
 export function reservationStatusLabel(status: string): string {
   const map: Record<string, string> = {
     pending: 'In attesa',

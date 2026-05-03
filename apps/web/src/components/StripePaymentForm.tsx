@@ -70,7 +70,7 @@ export function StripePaymentForm({
   onCompleted,
 }: {
   payment: Payment
-  /** Path dopo redirect 3DS (es. /me/reservations) */
+  /** Path dopo redirect 3DS (es. lista droplets: /me/reservations) */
   returnNextPath: string
   onCompleted?: () => void
 }): ReactElement {

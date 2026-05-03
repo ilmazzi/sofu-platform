@@ -23,7 +23,7 @@ export default function RootLayout(): React.ReactElement {
             <ShellNavLink to="/campaigns" label="Campagne" active={campaignsNavActive} />
             {loading ? null : user ? (
               <>
-                <ShellNavLink to="/me/reservations" label="Prenotazioni" />
+                <ShellNavLink to="/me/reservations" label="I miei droplets" />
                 {user.role === 'creator' || user.role === 'operator' || user.role === 'admin' ? (
                   <>
                     <ShellNavLink to="/me/campaigns" label="Le mie campagne" />
