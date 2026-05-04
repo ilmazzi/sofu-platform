@@ -1322,6 +1322,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/backoffice/simulations/reservation-load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simula prenotazioni e annulli (solo admin, non production-ready)
+         * @description Crea utenti supporter fittizi e alterna creazione / annullo prenotazioni sulla campagna indicata, usando le stesse action del flusso reale. Disattivabile con `SIMULATION_ENABLED=false`. Richiede campagna `published` o `activated`. Con `stay_below_bloom` true non si raggiunge il Bloom (resta almeno un posto sotto `target_supporters`). Le notifiche sono disattivate durante la run.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReservationLoadSimulationRequest"];
+                };
+            };
+            responses: {
+                /** @description Eseguito (controllare `errors` per singoli passi falliti) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReservationLoadSimulationResult"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description Campagna non idonea o parametri non validi */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReservationLoadSimulationResult"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/backoffice/stats": {
         parameters: {
             query?: never;
@@ -1743,6 +1798,32 @@ export interface components {
             name: string;
             email: string;
             role: string;
+        };
+        ReservationLoadSimulationRequest: {
+            campaign_slug: string;
+            /** @description Numero di passi (prenota o annulla). Capped lato server. */
+            steps?: number;
+            /** @description Probabilità di tentare un annullo se esistono prenotazioni attive (prima del Bloom). */
+            cancel_probability?: number;
+            /** @description Se true, non supera mai target_supporters - 1 prenotazioni attive. */
+            stay_below_bloom?: boolean;
+        };
+        ReservationLoadSimulationResult: {
+            ok: boolean;
+            message?: string | null;
+            campaign_slug?: string;
+            steps_requested?: number;
+            cancel_probability?: number;
+            stay_below_bloom?: boolean;
+            reservations_created?: number;
+            reservations_cancelled?: number;
+            supporters_created?: number;
+            steps_skipped_no_op?: number;
+            errors?: Record<string, never>[];
+            duration_ms?: number;
+            campaign_after?: {
+                [key: string]: unknown;
+            } | null;
         };
         BackofficeDashboardStats: {
             total_users: number;

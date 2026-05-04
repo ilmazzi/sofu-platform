@@ -777,6 +777,43 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/v1/backoffice/simulations/reservation-load:
+    post:
+      tags: [Backoffice]
+      summary: Simula prenotazioni e annulli (solo admin, non production-ready)
+      description: >
+        Crea utenti supporter fittizi e alterna creazione / annullo prenotazioni sulla campagna indicata,
+        usando le stesse action del flusso reale. Disattivabile con `SIMULATION_ENABLED=false`.
+        Richiede campagna `published` o `activated`. Con `stay_below_bloom` true non si raggiunge il Bloom
+        (resta almeno un posto sotto `target_supporters`). Le notifiche sono disattivate durante la run.
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationLoadSimulationRequest'
+      responses:
+        '200':
+          description: Eseguito (controllare `errors` per singoli passi falliti)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationLoadSimulationResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Campagna non idonea o parametri non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationLoadSimulationResult'
+
   /api/v1/backoffice/stats:
     get:
       tags: [Backoffice]
@@ -1547,6 +1584,61 @@ components:
           type: string
         role:
           type: string
+
+    ReservationLoadSimulationRequest:
+      type: object
+      required: [campaign_slug]
+      properties:
+        campaign_slug:
+          type: string
+        steps:
+          type: integer
+          minimum: 1
+          description: Numero di passi (prenota o annulla). Capped lato server.
+        cancel_probability:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Probabilità di tentare un annullo se esistono prenotazioni attive (prima del Bloom).
+        stay_below_bloom:
+          type: boolean
+          description: Se true, non supera mai target_supporters - 1 prenotazioni attive.
+
+    ReservationLoadSimulationResult:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+          nullable: true
+        campaign_slug:
+          type: string
+        steps_requested:
+          type: integer
+        cancel_probability:
+          type: number
+        stay_below_bloom:
+          type: boolean
+        reservations_created:
+          type: integer
+        reservations_cancelled:
+          type: integer
+        supporters_created:
+          type: integer
+        steps_skipped_no_op:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+        duration_ms:
+          type: integer
+        campaign_after:
+          type: object
+          nullable: true
+          additionalProperties: true
 
     BackofficeDashboardStats:
       type: object

@@ -80,6 +80,11 @@ export default function RootLayout(): React.ReactElement {
                       <Menu.Item component={Link} to="/backoffice/users">
                         Utenti
                       </Menu.Item>
+                      {user.role === 'admin' ? (
+                        <Menu.Item component={Link} to="/backoffice/simulation">
+                          Simulazione carico
+                        </Menu.Item>
+                      ) : null}
                     </Menu.Dropdown>
                   </Menu>
                 ) : null}

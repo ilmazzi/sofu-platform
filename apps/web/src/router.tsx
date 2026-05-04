@@ -3,6 +3,7 @@ import RootLayout from './layouts/RootLayout'
 import BackofficeAuditLogsPage from './pages/BackofficeAuditLogsPage'
 import BackofficeDashboardPage from './pages/BackofficeDashboardPage'
 import BackofficeReviewQueuePage from './pages/BackofficeReviewQueuePage'
+import BackofficeSimulationPage from './pages/BackofficeSimulationPage'
 import BackofficeUsersPage from './pages/BackofficeUsersPage'
 import CampaignDetailPage from './pages/CampaignDetailPage'
 import CampaignsPage from './pages/CampaignsPage'
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
       { path: 'backoffice/review', element: <BackofficeReviewQueuePage /> },
       { path: 'backoffice/audit-logs', element: <BackofficeAuditLogsPage /> },
       { path: 'backoffice/users', element: <BackofficeUsersPage /> },
+      { path: 'backoffice/simulation', element: <BackofficeSimulationPage /> },
     ],
   },
 ])
