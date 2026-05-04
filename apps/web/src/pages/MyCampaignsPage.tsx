@@ -73,9 +73,20 @@ function CampaignOwnerRow({ c }: { c: Campaign }): ReactElement {
           <Title order={4} lineClamp={2} style={{ letterSpacing: '-0.02em' }}>
             {c.title}
           </Title>
-          <Text size="sm" c="dimmed">
-            {c.active_reservations_count} sostenitori · obiettivo {c.target_supporters} persone
-          </Text>
+          <Group gap="sm" wrap="wrap">
+            <Anchor
+              component={Link}
+              to={`/campaigns/${encodeURIComponent(c.slug)}/edit`}
+              size="sm"
+              fw={600}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Modifica
+            </Anchor>
+            <Text size="sm" c="dimmed">
+              {c.active_reservations_count} sostenitori · obiettivo {c.target_supporters} persone
+            </Text>
+          </Group>
         </Stack>
       </Group>
     </Paper>
@@ -179,13 +190,13 @@ export default function MyCampaignsPage(): ReactElement {
           Campagne
         </Anchor>
         <Text size="sm" c="dimmed">
-          Le mie campagne
+          Create
         </Text>
       </Breadcrumbs>
 
       <Stack gap="xs">
         <Title order={2} style={{ letterSpacing: '-0.03em' }}>
-          Le mie campagne
+          Create
         </Title>
         <Text c="dimmed" maw={640} lh={1.65}>
           Qui trovi tutti gli stati (bozza, revisione, approvata, pubblicata…). L’elenco pubblico mostra solo le campagne

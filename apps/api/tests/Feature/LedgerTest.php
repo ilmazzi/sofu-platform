@@ -109,6 +109,7 @@ class LedgerTest extends TestCase
             'min_price_cents' => 1000,
             'max_price_cents' => $amountCents,
             'current_price_cents' => $amountCents,
+            'target_supporters' => 1,
         ]);
 
         $this

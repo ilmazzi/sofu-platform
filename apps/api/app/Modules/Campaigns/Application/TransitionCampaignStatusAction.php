@@ -43,7 +43,7 @@ class TransitionCampaignStatusAction
 
             $lockedCampaign->forceFill($attributes)->save();
 
-            $this->audit->record($this->auditAction($to), $actor, $lockedCampaign, [
+            $this->audit->record($this->auditAction($from, $to), $actor, $lockedCampaign, [
                 'from' => $from->value,
                 'to' => $to->value,
             ]);
@@ -75,7 +75,12 @@ class TransitionCampaignStatusAction
     {
         return match ($from) {
             CampaignStatus::Draft => $to === CampaignStatus::SubmittedForReview,
-            CampaignStatus::SubmittedForReview => in_array($to, [CampaignStatus::Approved, CampaignStatus::Rejected], true),
+            CampaignStatus::Rejected => $to === CampaignStatus::SubmittedForReview,
+            CampaignStatus::SubmittedForReview => in_array($to, [
+                CampaignStatus::Approved,
+                CampaignStatus::Rejected,
+                CampaignStatus::Draft,
+            ], true),
             CampaignStatus::Approved => $to === CampaignStatus::Published,
             CampaignStatus::Published => in_array($to, [CampaignStatus::Activated, CampaignStatus::Cancelled, CampaignStatus::Expired], true),
             CampaignStatus::Activated => in_array($to, [CampaignStatus::Successful, CampaignStatus::Closed, CampaignStatus::Cancelled, CampaignStatus::Failed], true),
@@ -83,8 +88,12 @@ class TransitionCampaignStatusAction
         };
     }
 
-    private function auditAction(CampaignStatus $to): string
+    private function auditAction(CampaignStatus $from, CampaignStatus $to): string
     {
+        if ($from === CampaignStatus::SubmittedForReview && $to === CampaignStatus::Draft) {
+            return AuditActions::CAMPAIGN_WITHDRAWN_FROM_REVIEW;
+        }
+
         return match ($to) {
             CampaignStatus::SubmittedForReview => AuditActions::CAMPAIGN_SUBMITTED_FOR_REVIEW,
             CampaignStatus::Approved => AuditActions::CAMPAIGN_APPROVED,

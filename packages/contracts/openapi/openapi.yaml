@@ -336,6 +336,50 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Campaigns]
+      summary: Update editable campaign (creator, pre-live)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCampaignRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Campaigns]
+      summary: Delete campaign (creator, no live reservations)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/campaigns/{slug}/submit-for-review:
     post:
@@ -360,6 +404,28 @@ paths:
           $ref: '#/components/responses/InvalidCampaignTransition'
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /api/v1/campaigns/{slug}/withdraw-review:
+    post:
+      tags: [Campaigns]
+      summary: Return campaign from review to draft (creator)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/InvalidCampaignTransition'
 
   /api/v1/campaigns/{slug}/publish:
     post:
@@ -1056,6 +1122,10 @@ components:
           nullable: true
         description:
           type: string
+        video_url:
+          type: string
+          format: uri
+          nullable: true
         category:
           type: string
           nullable: true
@@ -1063,8 +1133,13 @@ components:
           $ref: '#/components/schemas/CampaignStatus'
         currency:
           type: string
+        is_commercial:
+          type: boolean
         target_supporters:
           type: integer
+        full_bloom_drops:
+          type: integer
+          nullable: true
         active_reservations_count:
           type: integer
         min_price_cents:
@@ -1116,10 +1191,8 @@ components:
       required:
         - title
         - description
-        - currency
         - target_supporters
-        - min_price_cents
-        - max_price_cents
+        - full_bloom_drops
         - cost_items
       properties:
         title:
@@ -1128,17 +1201,25 @@ components:
           type: string
         description:
           type: string
+        video_url:
+          type: string
+          format: uri
         category:
           type: string
         currency:
           type: string
-          description: ISO 4217; normalized to uppercase on the server
+          description: ISO 4217; defaults to EUR when omitted
+        is_commercial:
+          type: boolean
         target_supporters:
           type: integer
-        min_price_cents:
+          description: Blooming drops — minimum quotes to reach Bloom
+        full_bloom_drops:
           type: integer
-        max_price_cents:
+          description: Maximum quotes at full bloom (defines minimum drop value)
+        duration_days:
           type: integer
+          description: Campaign length in days from creation/update (default 30)
         cost_items:
           type: array
           minItems: 1
@@ -1150,6 +1231,10 @@ components:
                 type: string
               amount_cents:
                 type: integer
+
+    UpdateCampaignRequest:
+      allOf:
+        - $ref: '#/components/schemas/StoreCampaignRequest'
 
     ReservationStatus:
       type: string
@@ -1163,7 +1248,15 @@ components:
 
     ReservationCampaignEmbed:
       type: object
-      required: [id, type, title, slug, current_price_cents, active_reservations_count]
+      required:
+        - id
+        - type
+        - title
+        - slug
+        - status
+        - target_supporters
+        - current_price_cents
+        - active_reservations_count
       properties:
         id:
           type: string
@@ -1174,6 +1267,10 @@ components:
           type: string
         slug:
           type: string
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
+        target_supporters:
+          type: integer
         current_price_cents:
           type: integer
         active_reservations_count:

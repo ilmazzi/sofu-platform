@@ -21,6 +21,11 @@ class CampaignFactory extends Factory
     public function definition(): array
     {
         $title = fake()->sentence(4);
+        $target = fake()->numberBetween(30, 90);
+        $total = fake()->numberBetween(150_000, 450_000);
+        $fullBloom = $target * 3;
+        $min = max(1, (int) round($total / $fullBloom));
+        $max = max($min + 1, (int) ceil($total / $target));
 
         return [
             'creator_id' => User::factory(),
@@ -28,15 +33,20 @@ class CampaignFactory extends Factory
             'slug' => Str::slug($title).'-'.Str::lower((string) Str::ulid()),
             'summary' => fake()->sentence(),
             'description' => fake()->paragraphs(3, true),
-            'category' => fake()->randomElement(['education', 'environment', 'health', 'community']),
+            'video_url' => 'https://example.com/seed-promo-video',
+            'category' => fake()->randomElement([
+                'tech', 'art', 'music', 'education', 'environment', 'health', 'community',
+            ]),
             'status' => CampaignStatus::Draft,
             'currency' => 'EUR',
-            'target_supporters' => fake()->numberBetween(50, 1000),
+            'is_commercial' => false,
+            'target_supporters' => $target,
+            'full_bloom_drops' => $fullBloom,
             'active_reservations_count' => 0,
-            'min_price_cents' => 1500,
-            'max_price_cents' => 5000,
-            'current_price_cents' => 5000,
-            'total_amount_cents' => 150000,
+            'min_price_cents' => $min,
+            'max_price_cents' => $max,
+            'current_price_cents' => $max,
+            'total_amount_cents' => $total,
             'published_at' => null,
             'starts_at' => null,
             'ends_at' => now()->addMonths(2),

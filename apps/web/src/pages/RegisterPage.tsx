@@ -76,7 +76,7 @@ export default function RegisterPage(): ReactElement {
       const message = err instanceof Error ? err.message : 'Richiesta non riuscita.'
       setError(
         message === 'Failed to fetch'
-          ? 'Impossibile contattare l’API (verifica che il backend sia avviato, es. porta 8000).'
+          ? 'Impossibile contattare l’API. In locale: Herd su sofu-platform.test, VITE_API_URL vuoto in apps/web/.env, apri http://localhost:5173; dopo modifiche a apps/api/.env esegui `php artisan config:clear` e riavvia `npm run dev`.'
           : message,
       )
     } finally {

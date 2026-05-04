@@ -45,10 +45,17 @@ class CreateReservationAction
                     throw new ConflictHttpException('Idempotency key was already used with a different request.');
                 }
 
-                return [
-                    'reservation' => $existing->load(['campaign', 'priceSnapshot']),
-                    'created' => false,
-                ];
+                $canReactivate = in_array($existing->status, [
+                    ReservationStatus::Cancelled,
+                    ReservationStatus::Expired,
+                ], true);
+
+                if (! $canReactivate) {
+                    return [
+                        'reservation' => $existing->load(['campaign', 'priceSnapshot']),
+                        'created' => false,
+                    ];
+                }
             }
 
             $lockedCampaign = Campaign::query()
@@ -60,7 +67,29 @@ class CreateReservationAction
                 throw new ConflictHttpException('Campaign is not open for reservations.');
             }
 
-            if (Reservation::query()->where('campaign_id', $lockedCampaign->id)->where('supporter_id', $supporter->id)->exists()) {
+            $blockingStatuses = [
+                ReservationStatus::Pending,
+                ReservationStatus::Active,
+                ReservationStatus::Failed,
+                ReservationStatus::ConvertedToPayment,
+            ];
+
+            if (Reservation::query()
+                ->where('campaign_id', $lockedCampaign->id)
+                ->where('supporter_id', $supporter->id)
+                ->whereIn('status', $blockingStatuses)
+                ->exists()) {
+                throw new ConflictHttpException('Supporter already has a reservation for this campaign.');
+            }
+
+            $reuseReservation = Reservation::query()
+                ->where('campaign_id', $lockedCampaign->id)
+                ->where('supporter_id', $supporter->id)
+                ->whereIn('status', [ReservationStatus::Cancelled, ReservationStatus::Expired])
+                ->lockForUpdate()
+                ->first();
+
+            if ($reuseReservation !== null && $existing !== null && $reuseReservation->id !== $existing->id) {
                 throw new ConflictHttpException('Supporter already has a reservation for this campaign.');
             }
 
@@ -73,6 +102,8 @@ class CreateReservationAction
                 $lockedCampaign->max_price_cents,
             );
 
+            $snapshotReason = $reuseReservation !== null ? 'reservation_reactivated' : 'reservation_created';
+
             $snapshot = CampaignPriceSnapshot::create([
                 'campaign_id' => $lockedCampaign->id,
                 'active_reservations_count' => $activeReservationsCount,
@@ -80,19 +111,31 @@ class CreateReservationAction
                 'min_price_cents' => $lockedCampaign->min_price_cents,
                 'max_price_cents' => $lockedCampaign->max_price_cents,
                 'total_amount_cents' => $lockedCampaign->total_amount_cents,
-                'reason' => 'reservation_created',
+                'reason' => $snapshotReason,
             ]);
 
-            $reservation = Reservation::create([
-                'campaign_id' => $lockedCampaign->id,
-                'supporter_id' => $supporter->id,
-                'status' => ReservationStatus::Active,
-                'price_quoted_cents' => $priceQuotedCents,
-                'effective_price_cents' => $effectivePriceCents,
-                'price_snapshot_id' => $snapshot->id,
-                'idempotency_key' => $idempotencyKey,
-                'payload_hash' => $payloadHash,
-            ]);
+            if ($reuseReservation !== null) {
+                $reuseReservation->forceFill([
+                    'status' => ReservationStatus::Active,
+                    'price_quoted_cents' => $priceQuotedCents,
+                    'effective_price_cents' => $effectivePriceCents,
+                    'price_snapshot_id' => $snapshot->id,
+                    'idempotency_key' => $idempotencyKey,
+                    'payload_hash' => $payloadHash,
+                ])->save();
+                $reservation = $reuseReservation;
+            } else {
+                $reservation = Reservation::create([
+                    'campaign_id' => $lockedCampaign->id,
+                    'supporter_id' => $supporter->id,
+                    'status' => ReservationStatus::Active,
+                    'price_quoted_cents' => $priceQuotedCents,
+                    'effective_price_cents' => $effectivePriceCents,
+                    'price_snapshot_id' => $snapshot->id,
+                    'idempotency_key' => $idempotencyKey,
+                    'payload_hash' => $payloadHash,
+                ]);
+            }
 
             $lockedCampaign->forceFill([
                 'active_reservations_count' => $activeReservationsCount,

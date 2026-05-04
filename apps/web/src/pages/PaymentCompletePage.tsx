@@ -55,7 +55,7 @@ export default function PaymentCompletePage(): ReactElement {
         </Title>
         <Text c="dimmed">Nessun pagamento da verificare.</Text>
         <Button component={Link} to="/me/reservations" variant="light" w="fit-content">
-          I miei droplets
+          Le mie drop
         </Button>
       </Stack>
     )

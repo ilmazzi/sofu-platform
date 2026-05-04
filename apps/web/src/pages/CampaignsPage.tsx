@@ -17,6 +17,7 @@ import {
 import type { components } from '@sofu/contracts'
 import { CampaignFeedCard } from '../components/CampaignFeedCard'
 import { apiFetch } from '../lib/api/client'
+import { CAMPAIGN_CATEGORY_FILTER_OPTIONS } from '../lib/campaignCategories'
 
 type Campaign = components['schemas']['Campaign']
 
@@ -28,18 +29,6 @@ const SORT_OPTIONS = [
   { value: 'price-low', label: 'Prezzo più basso' },
   { value: 'price-high', label: 'Prezzo più alto' },
   { value: 'almost-complete', label: 'Quasi complete' },
-]
-
-const CATEGORY_OPTIONS = [
-  { value: 'tech', label: 'Tecnologia' },
-  { value: 'art', label: 'Arte' },
-  { value: 'music', label: 'Musica' },
-  { value: 'film', label: 'Film' },
-  { value: 'games', label: 'Giochi' },
-  { value: 'food', label: 'Cibo' },
-  { value: 'fashion', label: 'Moda' },
-  { value: 'design', label: 'Design' },
-  { value: 'publishing', label: 'Editoria' },
 ]
 
 const STATUS_OPTIONS = [
@@ -186,7 +175,7 @@ export default function CampaignsPage(): ReactElement {
                   Categoria
                 </Text>
                 <Stack gap="xs">
-                  {CATEGORY_OPTIONS.map((cat) => (
+                  {CAMPAIGN_CATEGORY_FILTER_OPTIONS.map((cat) => (
                     <Checkbox
                       key={cat.value}
                       label={cat.label}

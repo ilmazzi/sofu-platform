@@ -2,7 +2,7 @@
 export function reservationStatusLabel(status: string): string {
   const map: Record<string, string> = {
     pending: 'In attesa',
-    active: 'Attiva — completa il pagamento',
+    active: 'Promessa di contributo (annaffiatoio)',
     cancelled: 'Annullata',
     expired: 'Scaduta',
     converted_to_payment: 'Pagamento completato',

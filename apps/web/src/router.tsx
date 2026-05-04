@@ -6,7 +6,7 @@ import BackofficeReviewQueuePage from './pages/BackofficeReviewQueuePage'
 import BackofficeUsersPage from './pages/BackofficeUsersPage'
 import CampaignDetailPage from './pages/CampaignDetailPage'
 import CampaignsPage from './pages/CampaignsPage'
-import CreateCampaignPage from './pages/CreateCampaignPage'
+import CampaignFormPage from './pages/CampaignFormPage'
 import HomePage from './pages/HomePage'
 import MyCampaignsPage from './pages/MyCampaignsPage'
 import MyReservationsPage from './pages/MyReservationsPage'
@@ -23,7 +23,8 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'campaigns', element: <CampaignsPage /> },
-      { path: 'campaigns/new', element: <CreateCampaignPage /> },
+      { path: 'campaigns/new', element: <CampaignFormPage /> },
+      { path: 'campaigns/:slug/edit', element: <CampaignFormPage /> },
       { path: 'campaigns/:slug', element: <CampaignDetailPage /> },
       { path: 'me/reservations', element: <MyReservationsPage /> },
       { path: 'payments/complete', element: <PaymentCompletePage /> },

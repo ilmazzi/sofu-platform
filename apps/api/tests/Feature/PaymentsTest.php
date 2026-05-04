@@ -41,6 +41,32 @@ class PaymentsTest extends TestCase
         ]);
     }
 
+    public function test_payment_intent_rejected_until_campaign_reaches_bloom(): void
+    {
+        $supporter = User::factory()->create();
+        $campaign = Campaign::factory()->published()->create([
+            'total_amount_cents' => 8000,
+            'min_price_cents' => 1000,
+            'max_price_cents' => 5000,
+            'current_price_cents' => 5000,
+            'target_supporters' => 50,
+        ]);
+
+        $this
+            ->actingAs($supporter)
+            ->withHeader('Idempotency-Key', 'bloom-test-'.uniqid())
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")
+            ->assertCreated();
+
+        $reservation = Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail();
+
+        $this
+            ->actingAs($supporter)
+            ->postJson("/api/v1/reservations/{$reservation->id}/payment-intent")
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'Il pagamento si abilita al Bloom: quando la campagna raggiunge l’obiettivo sostenitori.']);
+    }
+
     public function test_supporter_cannot_create_payment_intent_for_another_supporters_reservation(): void
     {
         [, $reservation] = $this->createReservation();
@@ -235,6 +261,7 @@ class PaymentsTest extends TestCase
             'min_price_cents' => 1000,
             'max_price_cents' => 5000,
             'current_price_cents' => 5000,
+            'target_supporters' => 1,
         ]);
 
         $this

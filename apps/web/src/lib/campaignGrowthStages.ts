@@ -2,7 +2,7 @@
 export const CAMPAIGN_GROWTH_STAGES = [
   {
     img: '/images/campaign-growth/stage-seme.png',
-    label: 'Seme',
+    label: 'Seed',
   },
   {
     img: '/images/campaign-growth/stage-germoglio.png',

@@ -34,6 +34,10 @@ class CancelReservationAction
             $lockedCampaign = $lockedReservation->campaign()->lockForUpdate()->firstOrFail();
             $previousCampaignPriceCents = $lockedCampaign->current_price_cents;
 
+            if ($lockedCampaign->hasReachedBloom()) {
+                throw new ConflictHttpException('Cannot cancel after the campaign reached Bloom.');
+            }
+
             $lockedReservation->forceFill(['status' => ReservationStatus::Cancelled])->save();
 
             $activeReservationsCount = max(0, $lockedCampaign->active_reservations_count - 1);

@@ -25,10 +25,13 @@ class Campaign extends Model
         'slug',
         'summary',
         'description',
+        'video_url',
         'category',
         'status',
         'currency',
+        'is_commercial',
         'target_supporters',
+        'full_bloom_drops',
         'active_reservations_count',
         'min_price_cents',
         'max_price_cents',
@@ -44,6 +47,8 @@ class Campaign extends Model
         return [
             'status' => CampaignStatus::class,
             'target_supporters' => 'integer',
+            'full_bloom_drops' => 'integer',
+            'is_commercial' => 'boolean',
             'active_reservations_count' => 'integer',
             'min_price_cents' => 'integer',
             'max_price_cents' => 'integer',
@@ -85,5 +90,22 @@ class Campaign extends Model
         return $this->hasMany(AuditLog::class, 'target_id')
             ->where('target_type', $this->getMorphClass())
             ->latest();
+    }
+
+    /**
+     * Bloom: obiettivo sostenitori raggiunto, oppure campagna conclusa con successo.
+     * Il contributo monetario si abilita solo da questo punto (promessa → pagamento).
+     */
+    public function hasReachedBloom(): bool
+    {
+        if ($this->target_supporters <= 0) {
+            return false;
+        }
+
+        if ($this->active_reservations_count >= $this->target_supporters) {
+            return true;
+        }
+
+        return in_array($this->status, [CampaignStatus::Successful, CampaignStatus::Closed], true);
     }
 }

@@ -601,10 +601,63 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete campaign (creator, no live reservations) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: components["parameters"]["CampaignSlug"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MessageResponse"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update editable campaign (creator, pre-live) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: components["parameters"]["CampaignSlug"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCampaignRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CampaignWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["ValidationError"];
+            };
+        };
         trace?: never;
     };
     "/api/v1/campaigns/{slug}/submit-for-review": {
@@ -641,6 +694,47 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 409: components["responses"]["InvalidCampaignTransition"];
                 422: components["responses"]["ValidationError"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{slug}/withdraw-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Return campaign from review to draft (creator) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: components["parameters"]["CampaignSlug"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CampaignWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                409: components["responses"]["InvalidCampaignTransition"];
             };
         };
         delete?: never;
@@ -1433,10 +1527,14 @@ export interface components {
             slug: string;
             summary?: string | null;
             description?: string;
+            /** Format: uri */
+            video_url?: string | null;
             category?: string | null;
             status: components["schemas"]["CampaignStatus"];
             currency: string;
+            is_commercial?: boolean;
             target_supporters: number;
+            full_bloom_drops?: number | null;
             active_reservations_count: number;
             min_price_cents: number;
             max_price_cents: number;
@@ -1463,17 +1561,24 @@ export interface components {
             title: string;
             summary?: string;
             description: string;
+            /** Format: uri */
+            video_url?: string;
             category?: string;
-            /** @description ISO 4217; normalized to uppercase on the server */
-            currency: string;
+            /** @description ISO 4217; defaults to EUR when omitted */
+            currency?: string;
+            is_commercial?: boolean;
+            /** @description Blooming drops — minimum quotes to reach Bloom */
             target_supporters: number;
-            min_price_cents: number;
-            max_price_cents: number;
+            /** @description Maximum quotes at full bloom (defines minimum drop value) */
+            full_bloom_drops: number;
+            /** @description Campaign length in days from creation/update (default 30) */
+            duration_days?: number;
             cost_items: {
                 label: string;
                 amount_cents: number;
             }[];
         };
+        UpdateCampaignRequest: components["schemas"]["StoreCampaignRequest"];
         /** @enum {string} */
         ReservationStatus: "pending" | "active" | "cancelled" | "expired" | "converted_to_payment" | "failed";
         ReservationCampaignEmbed: {
@@ -1482,6 +1587,8 @@ export interface components {
             type: "campaign";
             title: string;
             slug: string;
+            status: components["schemas"]["CampaignStatus"];
+            target_supporters: number;
             current_price_cents: number;
             active_reservations_count: number;
         };

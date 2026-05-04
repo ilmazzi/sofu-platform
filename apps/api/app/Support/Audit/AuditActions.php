@@ -25,6 +25,12 @@ final class AuditActions
 
     public const CAMPAIGN_CREATED = 'campaign.created';
 
+    public const CAMPAIGN_UPDATED = 'campaign.updated';
+
+    public const CAMPAIGN_DELETED = 'campaign.deleted';
+
+    public const CAMPAIGN_WITHDRAWN_FROM_REVIEW = 'campaign.withdrawn_from_review';
+
     public const CAMPAIGN_SUBMITTED_FOR_REVIEW = 'campaign.submitted_for_review';
 
     public const CAMPAIGN_APPROVED = 'campaign.approved';

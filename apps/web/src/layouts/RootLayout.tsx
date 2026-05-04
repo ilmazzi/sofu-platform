@@ -4,12 +4,18 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { ShellNavLink } from '../components/ShellNavLink'
 import { useAuth } from '../context/AuthContext'
 
+function canCreateCampaigns(role: string | undefined): boolean {
+  return role === 'creator' || role === 'operator' || role === 'admin'
+}
+
 export default function RootLayout(): React.ReactElement {
   const { user, loading, logout } = useAuth()
   const location = useLocation()
   const campaignsNavActive =
     location.pathname.startsWith('/campaigns') && location.pathname !== '/campaigns/new'
   const backofficeActive = location.pathname.startsWith('/backoffice')
+  const myCampaignsSectionActive =
+    location.pathname.startsWith('/me/campaigns') || location.pathname.startsWith('/me/reservations')
 
   return (
     <AppShell header={{ height: 56 }} padding="md">
@@ -19,17 +25,37 @@ export default function RootLayout(): React.ReactElement {
             Sofu
           </Anchor>
           <Group gap="xs" wrap="wrap" align="center">
-            <ShellNavLink to="/" label="Inizio" end />
             <ShellNavLink to="/campaigns" label="Campagne" active={campaignsNavActive} />
             {loading ? null : user ? (
               <>
-                <ShellNavLink to="/me/reservations" label="I miei droplets" />
-                {user.role === 'creator' || user.role === 'operator' || user.role === 'admin' ? (
+                {!canCreateCampaigns(user.role) ? (
+                  <ShellNavLink to="/me/reservations" label="Le mie drop" end />
+                ) : (
                   <>
-                    <ShellNavLink to="/me/campaigns" label="Le mie campagne" />
-                    <ShellNavLink to="/campaigns/new" label="Nuova campagna" end />
+                    <Menu shadow="md" width={200}>
+                      <Menu.Target>
+                        <Button
+                          variant={myCampaignsSectionActive ? 'light' : 'subtle'}
+                          size="compact-sm"
+                          rightSection={<IconChevronDown size={14} />}
+                        >
+                          Le mie campagne
+                        </Button>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Item component={Link} to="/me/campaigns">
+                          Create
+                        </Menu.Item>
+                        <Menu.Item component={Link} to="/me/reservations">
+                          Le mie drop
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                    <Button component={Link} to="/campaigns/new" color="teal" size="compact-sm">
+                      Nuova campagna
+                    </Button>
                   </>
-                ) : null}
+                )}
                 {user.role === 'operator' || user.role === 'admin' ? (
                   <Menu shadow="md" width={200}>
                     <Menu.Target>

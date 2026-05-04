@@ -9,6 +9,7 @@ import {
   Group,
   Pagination,
   Paper,
+  Progress,
   Skeleton,
   Stack,
   Text,
@@ -19,6 +20,11 @@ import type { components } from '@sofu/contracts'
 import { StripePaymentForm } from '../components/StripePaymentForm'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api/client'
+import {
+  campaignBloomProgressPercent,
+  campaignHasReachedBloom,
+  reservationEligibleForPayment,
+} from '../lib/bloom'
 import { formatEuro } from '../lib/campaignMetrics'
 import { reservationStatusLabel } from '../lib/reservationLabels'
 
@@ -27,10 +33,6 @@ type Payment = components['schemas']['Payment']
 type Paginated = {
   data: Reservation[]
   meta: { current_page: number; last_page: number; total: number }
-}
-
-function reservationNeedsPayment(status: string): boolean {
-  return status === 'active'
 }
 
 function parseJson(raw: string): unknown {
@@ -77,11 +79,11 @@ export default function MyReservationsPage(): ReactElement {
         const json = parseJson(raw) as Paginated | null
         if (cancelled) return
         if (res.status === 401) {
-          setError('Accedi per vedere i tuoi droplets.')
+          setError('Accedi per vedere le tue drop (Le mie drop).')
           return
         }
         if (!res.ok || !json?.data) {
-          setError(`Impossibile caricare i droplets (${res.status}).`)
+          setError(`Impossibile caricare Le mie drop (${res.status}).`)
           return
         }
         setRows(json.data)
@@ -145,10 +147,10 @@ export default function MyReservationsPage(): ReactElement {
       <Stack gap="lg" py="md">
         <Card withBorder padding="xl" radius="lg" shadow="sm">
           <Stack gap="md" maw={480}>
-            <Title order={3}>I tuoi droplets</Title>
+            <Title order={3}>Le mie drop</Title>
             <Text c="dimmed" lh={1.6}>
-              Accedi per vedere le campagne in cui hai un droplet, lo stato del pagamento e completare eventuali quote
-              ancora da saldare.
+              Accedi per vedere le campagne che annaffi, lo stato delle quote e dei pagamenti, e il percorso verso il
+              Bloom.
             </Text>
             <Button component={Link} to="/login" color="teal" w="fit-content">
               Accedi
@@ -191,11 +193,12 @@ export default function MyReservationsPage(): ReactElement {
       <Group justify="space-between" align="flex-start" wrap="wrap" gap="md">
         <Stack gap="xs">
           <Title order={2} style={{ letterSpacing: '-0.03em' }}>
-            I miei droplets
+            Le mie drop
           </Title>
-          <Text c="dimmed" maw={560} lh={1.65}>
-            Stato delle quote, importi effettivi e pagamento. Dopo un pagamento andato a buon fine lo stato si aggiorna
-            automaticamente.
+          <Text c="dimmed" maw={720} lh={1.65}>
+            Campagne sostenute (annaffiate), stato attuale delle quote e dei pagamenti. Una volta che una campagna
+            raggiunge il Bloom, lo stato verrà aggiornato automaticamente e potrai gestire al meglio i tuoi contributi
+            (drop e droplet).
           </Text>
         </Stack>
         <Anchor component={Link} to="/campaigns" size="sm" fw={600}>
@@ -215,7 +218,7 @@ export default function MyReservationsPage(): ReactElement {
             <Text size="3rem" aria-hidden>
               ✦
             </Text>
-            <Title order={3}>Nessun droplet</Title>
+            <Title order={3}>Ancora nessuna drop</Title>
             <Text c="dimmed" lh={1.6}>
               Esplora le campagne pubbliche e aggiungi un droplet: qui troverai riepilogo, importo e link per il
               pagamento.
@@ -232,16 +235,22 @@ export default function MyReservationsPage(): ReactElement {
               const slug = r.campaign?.slug
               const pay = paymentById[r.id]
               const title = r.campaign?.title ?? slug ?? 'Campagna'
+              const c = r.campaign
+              const bloomed = c ? campaignHasReachedBloom(c) : false
+              const bloomPct = c ? campaignBloomProgressPercent(c) : 0
+              const canPay = reservationEligibleForPayment(r.status, bloomed)
               return (
                 <Paper key={r.id} withBorder radius="lg" p={{ base: 'md', sm: 'lg' }} shadow="sm">
                   <Stack gap="md">
                     <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
                       <Stack gap={4} maw="100%">
-                        <Group gap="xs" wrap="wrap">
-                          <Badge variant="light" color={reservationStatusColor(r.status)} tt="none" fw={600}>
-                            {reservationStatusLabel(r.status)}
-                          </Badge>
-                        </Group>
+                        {r.status !== 'active' ? (
+                          <Group gap="xs" wrap="wrap">
+                            <Badge variant="light" color={reservationStatusColor(r.status)} tt="none" fw={600}>
+                              {reservationStatusLabel(r.status)}
+                            </Badge>
+                          </Group>
+                        ) : null}
                         <Title order={4} lineClamp={2} style={{ letterSpacing: '-0.02em' }}>
                           {slug ? (
                             <Anchor component={Link} to={`/campaigns/${slug}`} c="inherit" underline="hover">
@@ -251,29 +260,74 @@ export default function MyReservationsPage(): ReactElement {
                             title
                           )}
                         </Title>
-                        <Text size="sm" c="dimmed">
-                          Quota effettiva:{' '}
-                          <Text span fw={700} c="dark" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {formatEuro(r.effective_price_cents, 'EUR')}
-                          </Text>
-                        </Text>
                       </Stack>
                     </Group>
 
                     <Divider />
 
                     {r.status === 'converted_to_payment' ? (
-                      <Alert color="teal" variant="light">
-                        Pagamento completato per questo droplet.
+                      <Alert color="teal" variant="light" title="In bloom!">
+                        Pagamento completato — la tua drop ha fatto la differenza.
                       </Alert>
-                    ) : r.status === 'failed' ? (
-                      <Alert color="red" variant="light">
-                        Il pagamento non è andato a buon fine. Puoi riprovare con «Prepara pagamento».
-                      </Alert>
-                    ) : reservationNeedsPayment(r.status) ? (
+                    ) : null}
+
+                    {c && (r.status === 'active' || r.status === 'failed') && !bloomed ? (
+                      <Stack gap="sm">
+                        <Alert color="blue" variant="light" title="Drop inserita nell’annaffiatoio">
+                          Non è stato ancora addebitato nulla: è una promessa di contributo. Quando la campagna raggiunge
+                          il Bloom, potrai confermare il pagamento.
+                        </Alert>
+                        <Text size="sm" fw={600}>
+                          Verso il Bloom
+                        </Text>
+                        <Progress value={bloomPct} size="md" radius="xl" color="teal" aria-label="Avanzamento Bloom" />
+                        <Text size="xs" c="dimmed">
+                          {Math.round(bloomPct)}% — {c.active_reservations_count} / {c.target_supporters} persone nella
+                          campagna
+                        </Text>
+                        <Text size="sm" c="dimmed">
+                          Quota di riferimento (al momento della drop):{' '}
+                          <Text span fw={700} c="dark" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {formatEuro(r.effective_price_cents, 'EUR')}
+                          </Text>
+                        </Text>
+                      </Stack>
+                    ) : null}
+
+                    {c && r.status === 'active' && bloomed ? (
+                      <Stack gap="sm">
+                        <Alert color="teal" variant="light" title="In bloom! La tua drop ha fatto la differenza">
+                          Ora puoi confermare il contributo con pagamento.
+                        </Alert>
+                        <Text size="sm">
+                          La tua Drop attualmente ammonta a{' '}
+                          <Text span fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {formatEuro(r.effective_price_cents, 'EUR')}
+                          </Text>
+                          .
+                        </Text>
+                      </Stack>
+                    ) : null}
+
+                    {c && r.status === 'failed' && bloomed ? (
+                      <Stack gap="sm">
+                        <Alert color="red" variant="light">
+                          Il pagamento non è andato a buon fine. Riprova con «Conferma il contributo».
+                        </Alert>
+                        <Text size="sm">
+                          La tua Drop attualmente ammonta a{' '}
+                          <Text span fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {formatEuro(r.effective_price_cents, 'EUR')}
+                          </Text>
+                          .
+                        </Text>
+                      </Stack>
+                    ) : null}
+
+                    {r.status !== 'converted_to_payment' && r.status !== 'cancelled' && r.status !== 'expired' && canPay ? (
                       <Stack gap="sm">
                         <Button type="button" onClick={() => void startPayment(r.id)} loading={pay === 'pending'}>
-                          Prepara pagamento
+                          Conferma il contributo
                         </Button>
                         {pay === 'error' ? (
                           <Text size="sm" c="red">

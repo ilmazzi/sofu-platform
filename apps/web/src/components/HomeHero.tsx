@@ -6,12 +6,16 @@ import { Link } from 'react-router-dom'
 const HERO_IMAGE =
   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=2400&q=88'
 
+function canCreateCampaigns(role: string | undefined): boolean {
+  return role === 'creator' || role === 'operator' || role === 'admin'
+}
+
 export function HomeHero({
   authLoading,
   user,
 }: {
   authLoading: boolean
-  user: { name: string } | null
+  user: { name: string; role?: string } | null
 }): ReactElement {
   return (
     <Box
@@ -114,8 +118,18 @@ export function HomeHero({
           ) : null}
           {!authLoading && user ? (
             <Text size="sm" c="rgba(255,255,255,0.95)" lh={1.6} style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
-              Bentornato, <strong>{user.name}</strong>. I tuoi droplets sono in{' '}
-              <HeroLink to="/me/reservations">I miei droplets</HeroLink>.
+              Bentornato, <strong>{user.name}</strong>.{' '}
+              {canCreateCampaigns(user.role) ? (
+                <>
+                  Nel menu <strong>Le mie campagne</strong> trovi <strong>Create</strong> (campagne che gestisci) e{' '}
+                  <strong>Le mie drop</strong> (campagne sostenute).
+                </>
+              ) : (
+                <>
+                  Le campagne che annaffi sono in{' '}
+                  <HeroLink to="/me/reservations">Le mie drop</HeroLink>.
+                </>
+              )}
             </Text>
           ) : null}
           <Text size="xs" c="rgba(255,255,255,0.5)" mt="xs">

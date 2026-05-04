@@ -25,8 +25,8 @@ class CampaignsTest extends TestCase
                 'category' => 'education',
                 'currency' => 'eur',
                 'target_supporters' => 120,
-                'min_price_cents' => 1500,
-                'max_price_cents' => 4500,
+                'full_bloom_drops' => 400,
+                'duration_days' => 45,
                 'cost_items' => [
                     ['label' => 'Materiali', 'amount_cents' => 180000],
                     ['label' => 'Docenti', 'amount_cents' => 240000],
@@ -38,7 +38,8 @@ class CampaignsTest extends TestCase
             ->assertJsonPath('data.type', 'campaign')
             ->assertJsonPath('data.status', CampaignStatus::Draft->value)
             ->assertJsonPath('data.currency', 'EUR')
-            ->assertJsonPath('data.current_price_cents', 4500)
+            ->assertJsonPath('data.current_price_cents', 3500)
+            ->assertJsonPath('data.min_price_cents', 1050)
             ->assertJsonPath('data.total_amount_cents', 420000)
             ->assertJsonCount(2, 'data.cost_items')
             ->assertJsonPath('data.media_urls', []);

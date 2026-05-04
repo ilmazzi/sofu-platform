@@ -8,6 +8,7 @@ import {
   FileInput,
   Grid,
   Group,
+  Progress,
   Skeleton,
   Stack,
   Table,
@@ -22,6 +23,12 @@ import { CampaignMetricsBlock } from '../components/CampaignMetricsBlock'
 import { StripePaymentForm } from '../components/StripePaymentForm'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch, apiFetchForm } from '../lib/api/client'
+import {
+  campaignBloomProgressPercent,
+  campaignHasReachedBloom,
+  reservationBlocksNewDroplet,
+  reservationEligibleForPayment,
+} from '../lib/bloom'
 import { campaignCategoryLabel, campaignStatusBadgeColor, campaignStatusLabel } from '../lib/campaignLabels'
 import { formatEuro, supporterProgressPercent } from '../lib/campaignMetrics'
 
@@ -33,10 +40,6 @@ type Payment = components['schemas']['Payment']
 type PaymentWrapped = { data: Payment }
 
 const RESERVABLE: string[] = ['published', 'activated']
-
-function reservationNeedsPayment(status: string): boolean {
-  return status === 'active'
-}
 
 const LIFECYCLE_OK = 'Operazione completata.'
 
@@ -60,6 +63,9 @@ export default function CampaignDetailPage(): ReactElement {
   const [draftGalleryFiles, setDraftGalleryFiles] = useState<File[]>([])
   const [draftGalleryPending, setDraftGalleryPending] = useState(false)
   const [draftGalleryMsg, setDraftGalleryMsg] = useState<string | null>(null)
+  const [cancelPending, setCancelPending] = useState(false)
+  const [cancelMsg, setCancelMsg] = useState<string | null>(null)
+  const [deletePending, setDeletePending] = useState(false)
 
   const paymentJustSucceeded = searchParams.get('payment') === 'success'
 
@@ -129,9 +135,17 @@ export default function CampaignDetailPage(): ReactElement {
   const isOwner = user !== null && campaign !== null && user.id === campaign.creator_id
   const isBackoffice = user?.role === 'operator' || user?.role === 'admin'
   const canReserve = campaign !== null && RESERVABLE.includes(campaign.status)
+  const ownerPreview =
+    isOwner &&
+    campaign !== null &&
+    ['draft', 'submitted_for_review', 'approved', 'rejected'].includes(campaign.status)
+  const canUploadGallery =
+    isOwner &&
+    campaign !== null &&
+    (campaign.status === 'draft' || campaign.status === 'approved')
 
   async function uploadDraftGallery(): Promise<void> {
-    if (!campaign || draftGalleryFiles.length === 0) return
+    if (!campaign || draftGalleryFiles.length === 0 || !canUploadGallery) return
     setDraftGalleryMsg(null)
     setDraftGalleryPending(true)
     try {
@@ -166,6 +180,46 @@ export default function CampaignDetailPage(): ReactElement {
     }
   }
 
+  async function onDeleteCampaign(): Promise<void> {
+    if (!campaign || !window.confirm('Eliminare definitivamente questa campagna? L’azione non è reversibile.')) {
+      return
+    }
+    setLifecycleMsg(null)
+    setDeletePending(true)
+    try {
+      const res = await apiFetch(`/api/v1/campaigns/${encodeURIComponent(campaign.slug)}`, {
+        method: 'DELETE',
+        json: {},
+      })
+      if (!res.ok) {
+        const raw = await res.text()
+        let body: unknown = null
+        try {
+          body = raw === '' ? null : JSON.parse(raw)
+        } catch {
+          body = null
+        }
+        if (
+          res.status === 409 &&
+          body &&
+          typeof body === 'object' &&
+          'error' in body &&
+          typeof (body as { error: { message?: string } }).error?.message === 'string'
+        ) {
+          setLifecycleMsg((body as { error: { message: string } }).error.message)
+          return
+        }
+        setLifecycleMsg(`Eliminazione non riuscita (${res.status}).`)
+        return
+      }
+      navigate('/me/campaigns', { replace: true })
+    } catch {
+      setLifecycleMsg('Errore di rete.')
+    } finally {
+      setDeletePending(false)
+    }
+  }
+
   async function runLifecycle(url: string): Promise<void> {
     setLifecycleMsg(null)
     setLifecyclePending(true)
@@ -186,6 +240,11 @@ export default function CampaignDetailPage(): ReactElement {
         typeof (body as { error: { message?: string } }).error?.message === 'string'
       ) {
         setLifecycleMsg((body as { error: { message: string } }).error.message)
+        return
+      }
+      if (res.status === 422 && body && typeof body === 'object' && 'errors' in body) {
+        const errors = (body as { errors: Record<string, string[]> }).errors
+        setLifecycleMsg(Object.values(errors).flat()[0] ?? 'Dati non validi.')
         return
       }
       if (!res.ok) {
@@ -239,7 +298,7 @@ export default function CampaignDetailPage(): ReactElement {
       const json = body as ReservationWrapped
       setLastReservation(json.data)
       setReserveMsg(
-        `Droplet aggiunto. Quota effettiva: ${formatEuro(json.data.effective_price_cents, campaign?.currency ?? 'EUR')}.`,
+        `Drop inserita nell’annaffiatoio. Quota di riferimento: ${formatEuro(json.data.effective_price_cents, campaign?.currency ?? 'EUR')}. Nessun addebito immediato: fino al Bloom il valore della tua quota resta questo; l’incasso avviene solo quando le regole della campagna lo consentono (non al solo clic).`,
       )
       setReloadTick((t) => t + 1)
     } catch {
@@ -249,9 +308,52 @@ export default function CampaignDetailPage(): ReactElement {
     }
   }
 
+  async function onCancelReservation(): Promise<void> {
+    const resv = effectiveReservation
+    if (!resv || resv.status !== 'active' || !campaign || campaignHasReachedBloom(campaign)) {
+      return
+    }
+    setCancelMsg(null)
+    setCancelPending(true)
+    try {
+      const res = await apiFetch(`/api/v1/reservations/${resv.id}`, {
+        method: 'DELETE',
+        json: {},
+      })
+      const raw = await res.text()
+      let body: unknown = null
+      try {
+        body = raw === '' ? null : JSON.parse(raw)
+      } catch {
+        body = null
+      }
+      if (
+        res.status === 409 &&
+        body &&
+        typeof body === 'object' &&
+        'error' in body &&
+        typeof (body as { error: { message?: string } }).error?.message === 'string'
+      ) {
+        setCancelMsg((body as { error: { message: string } }).error.message)
+        return
+      }
+      if (!res.ok) {
+        setCancelMsg(`Ritiro non riuscito (${res.status}).`)
+        return
+      }
+      setLastReservation(null)
+      setReserveMsg(null)
+      setReloadTick((t) => t + 1)
+    } catch {
+      setCancelMsg('Errore di rete.')
+    } finally {
+      setCancelPending(false)
+    }
+  }
+
   async function onPaymentIntent(): Promise<void> {
     const resv = effectiveReservation
-    if (!resv || !reservationNeedsPayment(resv.status)) return
+    if (!resv || !campaign || !reservationEligibleForPayment(resv.status, campaignHasReachedBloom(campaign))) return
     setPayment('pending')
     setPaymentMsg(null)
     try {
@@ -265,6 +367,15 @@ export default function CampaignDetailPage(): ReactElement {
         parsed = raw === '' ? null : (JSON.parse(raw) as PaymentWrapped)
       } catch {
         parsed = null
+      }
+      if (res.status === 422) {
+        setPayment(null)
+        const msg =
+          parsed && typeof parsed === 'object' && 'message' in parsed
+            ? String((parsed as { message: string }).message)
+            : 'Operazione non consentita.'
+        setPaymentMsg(msg)
+        return
       }
       if (!res.ok || !parsed?.data) {
         setPayment(null)
@@ -310,7 +421,16 @@ export default function CampaignDetailPage(): ReactElement {
   const s = encodeURIComponent(campaign.slug)
   const cat = campaignCategoryLabel(campaign.category)
   const costRows = [...(campaign.cost_items ?? [])].sort((a, b) => a.sort_order - b.sort_order)
-  const reserveOk = reserveMsg?.startsWith('Droplet aggiunto') ?? false
+  const reserveOk = reserveMsg?.includes('annaffiatoio') ?? false
+  const bloomed = campaignHasReachedBloom(campaign)
+  const bloomPct = campaignBloomProgressPercent(campaign)
+  const showAddDroplet =
+    canReserve &&
+    (effectiveReservation === null || !reservationBlocksNewDroplet(effectiveReservation.status))
+  const canWithdrawDroplet = effectiveReservation?.status === 'active' && !bloomed
+  const canPayDroplet =
+    effectiveReservation !== null &&
+    reservationEligibleForPayment(effectiveReservation.status, bloomed)
 
   return (
     <Box py="md">
@@ -378,9 +498,11 @@ export default function CampaignDetailPage(): ReactElement {
                       {cat}
                     </Badge>
                   ) : null}
-                  <Text size="xs" c="white" opacity={0.9} fw={600} style={{ marginLeft: 'auto' }}>
-                    {campaign.currency}
-                  </Text>
+                  {!ownerPreview ? (
+                    <Text size="xs" c="white" opacity={0.9} fw={600} style={{ marginLeft: 'auto' }}>
+                      {campaign.currency}
+                    </Text>
+                  ) : null}
                 </Group>
                 <Title order={1} c="white" fw={600} style={{ letterSpacing: '-0.03em', textShadow: '0 2px 24px rgba(0,0,0,0.5)' }}>
                   {campaign.title}
@@ -398,7 +520,7 @@ export default function CampaignDetailPage(): ReactElement {
             {/* Piantina */}
             <CampaignGrowthPlant
               progressPercent={supporterProgressPercent(campaign)}
-              variant="featured"
+              variant={ownerPreview ? 'creatorSeed' : 'featured'}
               projectLabel="progetto"
             />
 
@@ -476,46 +598,59 @@ export default function CampaignDetailPage(): ReactElement {
                   backgroundColor: '#f8f9fa',
                 }}
               >
-                <CampaignMetricsBlock c={campaign} compact />
+                <CampaignMetricsBlock c={campaign} compact creatorPreview={ownerPreview} />
               </Box>
 
-              {/* Azioni utente */}
+              {/* Azioni utente / anteprima creatore */}
               <Box
                 p="lg"
                 style={{
                   border: '1px solid #dee2e6',
                 }}
               >
-                <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="md">
-                  Partecipa
-                </Text>
-                {user ? (
+                {ownerPreview ? (
+                  <Alert color="yellow" title="Attenzione" variant="light">
+                    <Text size="sm" lh={1.6}>
+                      Controlla che tutti i campi siano corretti e che le cifre corrispondano alle tue necessità.
+                      Dopo l’invio in revisione, SoFu verificherà che il contenuto rispetti le linee guida, non includa
+                      materiale illegale e sia coerente. Una volta approvata, potrai ancora modificare la campagna prima
+                      della pubblicazione; le modifiche potranno essere notificate e sono passibili di veto o blocco.
+                    </Text>
+                  </Alert>
+                ) : (
+                  <>
+                    <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="md">
+                      Partecipa
+                    </Text>
+                    {user ? (
                   <Stack gap="md">
                     {canReserve ? (
-                      <form onSubmit={(e) => void onReserve(e)}>
-                        <Stack gap="sm">
-                          <Button 
-                            type="submit" 
-                            loading={reservePending} 
-                            color="dark" 
-                            size="md" 
-                            fullWidth
-                            style={{
-                              fontWeight: 600,
-                              letterSpacing: '0.02em',
-                              textTransform: 'uppercase',
-                              fontSize: '0.75rem'
-                            }}
-                          >
-                            💧 Aggiungi droplet
-                          </Button>
-                          {reserveMsg ? (
-                            <Alert color={reserveOk ? 'teal' : 'red'} variant="light" p="sm">
-                              <Text size="xs">{reserveMsg}</Text>
-                            </Alert>
-                          ) : null}
-                        </Stack>
-                      </form>
+                      showAddDroplet ? (
+                        <form onSubmit={(e) => void onReserve(e)}>
+                          <Stack gap="sm">
+                            <Button
+                              type="submit"
+                              loading={reservePending}
+                              color="dark"
+                              size="md"
+                              fullWidth
+                              style={{
+                                fontWeight: 600,
+                                letterSpacing: '0.02em',
+                                textTransform: 'uppercase',
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              💧 Aggiungi droplet
+                            </Button>
+                            {reserveMsg ? (
+                              <Alert color={reserveOk ? 'teal' : 'red'} variant="light" p="sm">
+                                <Text size="xs">{reserveMsg}</Text>
+                              </Alert>
+                            ) : null}
+                          </Stack>
+                        </form>
+                      ) : null
                     ) : (
                       <Text size="sm" c="dimmed" fw={400}>
                         I droplets sono aperti quando la campagna è pubblicata o attiva.
@@ -531,15 +666,98 @@ export default function CampaignDetailPage(): ReactElement {
                           #{effectiveReservation.id}
                         </Text>
                         {effectiveReservation.status === 'converted_to_payment' ? (
-                          <Alert color="teal" variant="light" p="sm">
-                            <Text size="xs">Pagamento completato.</Text>
+                          <Alert color="teal" variant="light" p="sm" title="In bloom!">
+                            <Text size="xs">Pagamento completato — la tua drop ha fatto la differenza.</Text>
                           </Alert>
-                        ) : effectiveReservation.status === 'failed' ? (
-                          <Alert color="red" variant="light" p="sm">
-                            <Text size="xs">Pagamento non riuscito.</Text>
-                          </Alert>
-                        ) : reservationNeedsPayment(effectiveReservation.status) ? (
+                        ) : null}
+
+                        {(effectiveReservation.status === 'active' || effectiveReservation.status === 'failed') &&
+                        !bloomed ? (
                           <Stack gap="sm">
+                            <Alert color="blue" variant="light" p="sm" title="Drop inserita nell’annaffiatoio">
+                              <Text size="xs">
+                                Nessun addebito ancora: è un impegno sull’offerta. Fino al Bloom il valore della tua quota resta quello indicato; dopo il Bloom può scendere verso il minimo fino a Full bloom o chiusura. L’incasso non coincide con la sola adesione.
+                              </Text>
+                            </Alert>
+                            <Text size="xs" fw={600}>
+                              Verso il Bloom
+                            </Text>
+                            <Progress value={bloomPct} size="sm" radius="xl" color="teal" />
+                            <Text size="xs" c="dimmed">
+                              {Math.round(bloomPct)}% — {campaign.active_reservations_count} / {campaign.target_supporters}{' '}
+                              quote Bloom (posti)
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              Quota di riferimento:{' '}
+                              <Text span fw={700} c="dark">
+                                {formatEuro(effectiveReservation.effective_price_cents, campaign.currency)}
+                              </Text>
+                            </Text>
+                            {canWithdrawDroplet ? (
+                              <Stack gap="xs" mt="xs">
+                                <Button
+                                  type="button"
+                                  variant="subtle"
+                                  color="gray"
+                                  size="xs"
+                                  loading={cancelPending}
+                                  onClick={() => void onCancelReservation()}
+                                  style={{ alignSelf: 'flex-start' }}
+                                >
+                                  Ritira la drop
+                                </Button>
+                                {cancelMsg ? (
+                                  <Alert color="red" variant="light" p="sm">
+                                    <Text size="xs">{cancelMsg}</Text>
+                                  </Alert>
+                                ) : null}
+                              </Stack>
+                            ) : null}
+                          </Stack>
+                        ) : null}
+
+                        {effectiveReservation.status === 'active' && bloomed ? (
+                          <Stack gap="sm">
+                            <Alert color="teal" variant="light" p="sm" title="Bloom raggiunto">
+                              <Text size="xs">
+                                Il valore della tua Drop può ancora aggiornarsi al ribasso fino a Full bloom o fine campagna.
+                                Qui sotto, quando disponibile, confermi il contributo sull’importo dovuto in quel momento.
+                              </Text>
+                            </Alert>
+                            <Text size="xs">
+                              Importo attuale della tua Drop:{' '}
+                              <Text span fw={700}>
+                                {formatEuro(effectiveReservation.effective_price_cents, campaign.currency)}
+                              </Text>
+                              .
+                            </Text>
+                          </Stack>
+                        ) : null}
+
+                        {effectiveReservation.status === 'failed' && bloomed ? (
+                          <Stack gap="sm">
+                            <Alert color="red" variant="light" p="sm">
+                              <Text size="xs">Pagamento non riuscito — riprova qui sotto.</Text>
+                            </Alert>
+                            <Text size="xs">
+                              Importo attuale della tua Drop:{' '}
+                              <Text span fw={700}>
+                                {formatEuro(effectiveReservation.effective_price_cents, campaign.currency)}
+                              </Text>
+                              .
+                            </Text>
+                          </Stack>
+                        ) : null}
+
+                        {canPayDroplet &&
+                        effectiveReservation.status !== 'converted_to_payment' &&
+                        effectiveReservation.status !== 'cancelled' &&
+                        effectiveReservation.status !== 'expired' ? (
+                          <Stack gap="sm" mt="sm">
+                            <Text size="xs" c="dimmed" lh={1.5}>
+                              Confermi sull’importo della Drop indicato dal sistema al momento dell’incasso (dopo il Bloom
+                              può ancora variare fino a conclusione campagna).
+                            </Text>
                             <Button
                               type="button"
                               onClick={() => void onPaymentIntent()}
@@ -552,15 +770,17 @@ export default function CampaignDetailPage(): ReactElement {
                                 fontWeight: 600,
                                 letterSpacing: '0.02em',
                                 textTransform: 'uppercase',
-                                fontSize: '0.65rem'
+                                fontSize: '0.65rem',
                               }}
                             >
-                              Prepara pagamento
+                              Conferma il contributo
                             </Button>
                             {paymentMsg ? (
                               <Alert
                                 color={
-                                  paymentMsg.includes('non riuscita') || paymentMsg.includes('Errore')
+                                  paymentMsg.includes('non riuscita') ||
+                                  paymentMsg.includes('Errore') ||
+                                  paymentMsg.includes('Bloom')
                                     ? 'red'
                                     : 'gray'
                                 }
@@ -573,7 +793,8 @@ export default function CampaignDetailPage(): ReactElement {
                             {payment && payment !== 'pending' ? (
                               <Stack gap="sm">
                                 <Text size="xs" c="dimmed">
-                                  Stato: <strong>{payment.status}</strong> — {formatEuro(payment.amount_cents, payment.currency)}
+                                  Stato: <strong>{payment.status}</strong> —{' '}
+                                  {formatEuro(payment.amount_cents, payment.currency)}
                                 </Text>
                                 <StripePaymentForm
                                   payment={payment}
@@ -602,6 +823,8 @@ export default function CampaignDetailPage(): ReactElement {
                     per aggiungere un droplet.
                   </Text>
                 )}
+                  </>
+                )}
               </Box>
 
               {/* Gestione campagna (owner/backoffice) */}
@@ -617,60 +840,102 @@ export default function CampaignDetailPage(): ReactElement {
                     Gestione
                   </Text>
                   <Stack gap="sm">
-                    {isOwner && campaign.status === 'draft' ? (
+                    {isOwner ? (
                       <Stack gap="sm">
-                        <FileInput
-                          label="Galleria immagini"
-                          description="PNG, JPEG, WebP o GIF — fino a 10 file per volta (max 5 MB ciascuno)."
-                          placeholder="Scegli file…"
-                          accept="image/png,image/jpeg,image/webp,image/gif"
-                          multiple
-                          clearable
-                          value={draftGalleryFiles.length > 0 ? draftGalleryFiles : undefined}
-                          onChange={(files) => setDraftGalleryFiles(files ?? [])}
-                          size="sm"
-                        />
                         <Button
-                          type="button"
-                          loading={draftGalleryPending}
-                          disabled={draftGalleryFiles.length === 0}
-                          variant="light"
+                          component={Link}
+                          to={`/campaigns/${encodeURIComponent(campaign.slug)}/edit`}
+                          variant="filled"
                           color="dark"
                           size="sm"
                           fullWidth
-                          onClick={() => void uploadDraftGallery()}
                         >
-                          Carica immagini
+                          Modifica
                         </Button>
-                        {draftGalleryMsg ? (
-                          <Alert color={draftGalleryMsg.includes('aggiornate') ? 'teal' : 'orange'} variant="light" p="sm">
-                            <Text size="xs">{draftGalleryMsg}</Text>
-                          </Alert>
+                        {canUploadGallery ? (
+                          <Stack gap="sm">
+                            <FileInput
+                              label="Galleria immagini"
+                              description="PNG, JPEG, WebP o GIF — fino a 10 file per volta (max 5 MB ciascuno)."
+                              placeholder="Scegli file…"
+                              accept="image/png,image/jpeg,image/webp,image/gif"
+                              multiple
+                              clearable
+                              value={draftGalleryFiles.length > 0 ? draftGalleryFiles : undefined}
+                              onChange={(files) => setDraftGalleryFiles(files ?? [])}
+                              size="sm"
+                            />
+                            <Button
+                              type="button"
+                              loading={draftGalleryPending}
+                              disabled={draftGalleryFiles.length === 0}
+                              variant="light"
+                              color="dark"
+                              size="sm"
+                              fullWidth
+                              onClick={() => void uploadDraftGallery()}
+                            >
+                              Carica immagini
+                            </Button>
+                            {draftGalleryMsg ? (
+                              <Alert color={draftGalleryMsg.includes('aggiornate') ? 'teal' : 'orange'} variant="light" p="sm">
+                                <Text size="xs">{draftGalleryMsg}</Text>
+                              </Alert>
+                            ) : null}
+                          </Stack>
                         ) : null}
-                        <Button
-                          type="button"
-                          loading={lifecyclePending}
-                          onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/submit-for-review`)}
-                          variant="outline"
-                          color="dark"
-                          size="sm"
-                          fullWidth
-                        >
-                          Invia in revisione
-                        </Button>
+                        {campaign.status === 'submitted_for_review' ? (
+                          <Button
+                            type="button"
+                            loading={lifecyclePending}
+                            onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/withdraw-review`)}
+                            variant="light"
+                            color="orange"
+                            size="sm"
+                            fullWidth
+                          >
+                            Ritira dalla revisione (torna in bozza)
+                          </Button>
+                        ) : null}
+                        {campaign.status === 'draft' || campaign.status === 'rejected' ? (
+                          <Button
+                            type="button"
+                            loading={lifecyclePending}
+                            onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/submit-for-review`)}
+                            variant="outline"
+                            color="dark"
+                            size="sm"
+                            fullWidth
+                          >
+                            Invia per revisione
+                          </Button>
+                        ) : null}
+                        {campaign.status === 'approved' ? (
+                          <Button
+                            type="button"
+                            loading={lifecyclePending}
+                            onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/publish`)}
+                            color="teal"
+                            size="sm"
+                            fullWidth
+                          >
+                            Pubblica
+                          </Button>
+                        ) : null}
+                        {ownerPreview ? (
+                          <Button
+                            type="button"
+                            loading={deletePending}
+                            onClick={() => void onDeleteCampaign()}
+                            variant="subtle"
+                            color="red"
+                            size="sm"
+                            fullWidth
+                          >
+                            Elimina campagna
+                          </Button>
+                        ) : null}
                       </Stack>
-                    ) : null}
-                    {isOwner && campaign.status === 'approved' ? (
-                      <Button
-                        type="button"
-                        loading={lifecyclePending}
-                        onClick={() => void runLifecycle(`/api/v1/campaigns/${s}/publish`)}
-                        color="teal"
-                        size="sm"
-                        fullWidth
-                      >
-                        Pubblica
-                      </Button>
                     ) : null}
                     {isBackoffice && campaign.status === 'submitted_for_review' ? (
                       <>

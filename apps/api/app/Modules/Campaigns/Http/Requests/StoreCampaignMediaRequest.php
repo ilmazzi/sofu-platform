@@ -4,6 +4,7 @@ namespace App\Modules\Campaigns\Http\Requests;
 
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class StoreCampaignMediaRequest extends FormRequest
 {
@@ -14,8 +15,13 @@ class StoreCampaignMediaRequest extends FormRequest
     public function authorize(): bool
     {
         $campaign = $this->route('campaign');
+        if (! $campaign instanceof Campaign || $this->user() === null) {
+            return false;
+        }
 
-        return $campaign instanceof Campaign && ($this->user()?->can('uploadMedia', $campaign) ?? false);
+        Gate::authorize('uploadMedia', $campaign);
+
+        return true;
     }
 
     protected function prepareForValidation(): void

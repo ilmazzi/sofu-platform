@@ -82,6 +82,21 @@ class CampaignLifecycleTest extends TestCase
             ->assertJsonPath('data.status', CampaignStatus::Rejected->value);
     }
 
+    public function test_creator_can_withdraw_submitted_campaign_to_draft(): void
+    {
+        $creator = User::factory()->creator()->create();
+        $campaign = Campaign::factory()->create([
+            'creator_id' => $creator->id,
+            'status' => CampaignStatus::SubmittedForReview,
+        ]);
+
+        $this
+            ->actingAs($creator)
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/withdraw-review")
+            ->assertOk()
+            ->assertJsonPath('data.status', CampaignStatus::Draft->value);
+    }
+
     public function test_creator_can_publish_approved_campaign(): void
     {
         $creator = User::factory()->creator()->create();
