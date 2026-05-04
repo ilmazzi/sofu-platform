@@ -13,6 +13,7 @@ import {
   Stack,
   Table,
   Text,
+  Textarea,
   Title,
 } from '@mantine/core'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -43,6 +44,8 @@ const RESERVABLE: string[] = ['published', 'activated']
 
 const LIFECYCLE_OK = 'Operazione completata.'
 
+const SOFU_FEE_THRESHOLD_CENTS = 500_000
+
 export default function CampaignDetailPage(): ReactElement {
   const { slug } = useParams<{ slug: string }>()
   const { user } = useAuth()
@@ -66,6 +69,7 @@ export default function CampaignDetailPage(): ReactElement {
   const [cancelPending, setCancelPending] = useState(false)
   const [cancelMsg, setCancelMsg] = useState<string | null>(null)
   const [deletePending, setDeletePending] = useState(false)
+  const [waiverRejectNote, setWaiverRejectNote] = useState('')
 
   const paymentJustSucceeded = searchParams.get('payment') === 'success'
 
@@ -144,6 +148,20 @@ export default function CampaignDetailPage(): ReactElement {
     campaign !== null &&
     (campaign.status === 'draft' || campaign.status === 'approved')
 
+  const costSubtotalCentsForWaiver =
+    campaign !== null
+      ? (campaign.cost_subtotal_cents ??
+          (campaign.cost_items ?? []).reduce((s, it) => s + it.amount_cents, 0))
+      : 0
+
+  const needsSofuWaiverDecision =
+    campaign !== null &&
+    isBackoffice &&
+    campaign.status === 'submitted_for_review' &&
+    costSubtotalCentsForWaiver > SOFU_FEE_THRESHOLD_CENTS &&
+    Boolean(campaign.sofu_fee_waiver_requested) &&
+    campaign.sofu_fee_waiver_state === 'pending'
+
   async function uploadDraftGallery(): Promise<void> {
     if (!campaign || draftGalleryFiles.length === 0 || !canUploadGallery) return
     setDraftGalleryMsg(null)
@@ -217,6 +235,49 @@ export default function CampaignDetailPage(): ReactElement {
       setLifecycleMsg('Errore di rete.')
     } finally {
       setDeletePending(false)
+    }
+  }
+
+  async function decideSofuFeeWaiver(approve: boolean): Promise<void> {
+    if (!campaign || !isBackoffice) return
+    const note = waiverRejectNote.trim()
+    if (!approve && note.length === 0) {
+      setLifecycleMsg('Per negare l’esenzione indica un motivo visibile al creator.')
+      return
+    }
+    setLifecycleMsg(null)
+    setLifecyclePending(true)
+    try {
+      const res = await apiFetch(`/api/v1/backoffice/campaigns/${encodeURIComponent(campaign.slug)}/sofu-fee-waiver`, {
+        method: 'POST',
+        json: {
+          decision: approve ? 'approve' : 'reject',
+          note: approve ? null : note,
+        },
+      })
+      const raw = await res.text()
+      let body: unknown = null
+      try {
+        body = raw === '' ? null : JSON.parse(raw)
+      } catch {
+        body = null
+      }
+      if (res.status === 422 && body && typeof body === 'object' && 'errors' in body) {
+        const errors = (body as { errors: Record<string, string[]> }).errors
+        setLifecycleMsg(Object.values(errors).flat()[0] ?? 'Dati non validi.')
+        return
+      }
+      if (!res.ok) {
+        setLifecycleMsg(`Azione non riuscita (${res.status}).`)
+        return
+      }
+      setWaiverRejectNote('')
+      setReloadTick((t) => t + 1)
+      setLifecycleMsg(LIFECYCLE_OK)
+    } catch {
+      setLifecycleMsg('Errore di rete.')
+    } finally {
+      setLifecyclePending(false)
     }
   }
 
@@ -578,6 +639,17 @@ export default function CampaignDetailPage(): ReactElement {
                 </Table>
               </Box>
             ) : null}
+
+            <Text component="p" size="xs" c="dimmed" lh={1.65} maw={720} mt="md">
+              <Text span fw={600} c="dimmed">
+                Commissione piattaforma.{' '}
+              </Text>
+              Sugli obiettivi che superano{' '}
+              {(SOFU_FEE_THRESHOLD_CENTS / 100).toLocaleString('it-IT')} € (somma delle voci dichiarate), SoFu applica il 2,5%
+              a supporto del servizio. Associazioni, no-profit e raccolte fondi possono chiedere in fase di revisione
+              l’esenzione, quando compatibile con la sostenibilità della piattaforma. Dettagli economici della singola
+              campagna restano tra creator e SoFu in sede di revisione.
+            </Text>
           </Stack>
         </Grid.Col>
 
@@ -680,12 +752,12 @@ export default function CampaignDetailPage(): ReactElement {
                               </Text>
                             </Alert>
                             <Text size="xs" fw={600}>
-                              Verso il Bloom
+                              Growing drops verso il Bloom
                             </Text>
                             <Progress value={bloomPct} size="sm" radius="xl" color="teal" />
                             <Text size="xs" c="dimmed">
                               {Math.round(bloomPct)}% — {campaign.active_reservations_count} / {campaign.target_supporters}{' '}
-                              quote Bloom (posti)
+                              growing drops (posti)
                             </Text>
                             <Text size="xs" c="dimmed">
                               Quota di riferimento:{' '}
@@ -731,6 +803,14 @@ export default function CampaignDetailPage(): ReactElement {
                               </Text>
                               .
                             </Text>
+                            {campaign.full_bloom_drops != null &&
+                            campaign.full_bloom_drops !== undefined &&
+                            campaign.full_bloom_drops > 0 ? (
+                              <Text size="xs" c="dimmed">
+                                Blooming drops nella campagna: {campaign.active_reservations_count} /{' '}
+                                {campaign.full_bloom_drops} posti verso il tetto di fioritura.
+                              </Text>
+                            ) : null}
                           </Stack>
                         ) : null}
 
@@ -939,6 +1019,46 @@ export default function CampaignDetailPage(): ReactElement {
                     ) : null}
                     {isBackoffice && campaign.status === 'submitted_for_review' ? (
                       <>
+                        {needsSofuWaiverDecision ? (
+                          <Stack gap="sm">
+                            <Alert color="gray" variant="light" title="Commissione SoFu — esenzione richiesta">
+                              <Text size="xs" lh={1.55}>
+                                Il creator ha chiesto di non applicare il 2,5% sull’obiettivo (oltre 5.000 €). Decidi prima
+                                di approvare la campagna.
+                              </Text>
+                            </Alert>
+                            <Textarea
+                              label="Motivo (obbligatorio se neghi)"
+                              placeholder="Spiega al creator perché l’esenzione non è concessa…"
+                              value={waiverRejectNote}
+                              onChange={(e) => setWaiverRejectNote(e.currentTarget.value)}
+                              minRows={2}
+                              size="sm"
+                            />
+                            <Button
+                              type="button"
+                              loading={lifecyclePending}
+                              onClick={() => void decideSofuFeeWaiver(true)}
+                              color="teal"
+                              size="sm"
+                              variant="light"
+                              fullWidth
+                            >
+                              Concedi esenzione
+                            </Button>
+                            <Button
+                              type="button"
+                              loading={lifecyclePending}
+                              onClick={() => void decideSofuFeeWaiver(false)}
+                              variant="outline"
+                              color="orange"
+                              size="sm"
+                              fullWidth
+                            >
+                              Nega esenzione
+                            </Button>
+                          </Stack>
+                        ) : null}
                         <Button
                           type="button"
                           loading={lifecyclePending}
@@ -946,8 +1066,9 @@ export default function CampaignDetailPage(): ReactElement {
                           color="teal"
                           size="sm"
                           fullWidth
+                          disabled={Boolean(needsSofuWaiverDecision)}
                         >
-                          Approva
+                          Approva campagna
                         </Button>
                         <Button
                           type="button"
@@ -958,7 +1079,7 @@ export default function CampaignDetailPage(): ReactElement {
                           size="sm"
                           fullWidth
                         >
-                          Rifiuta
+                          Rifiuta campagna
                         </Button>
                       </>
                     ) : null}

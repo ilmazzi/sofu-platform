@@ -17,17 +17,17 @@ export function dropMaxDecreaseCaption(c: Campaign): string {
   const cap = c.full_bloom_drops
   const capBit =
     cap !== null && cap !== undefined
-      ? `Se tutte le quote previste al Full bloom (${cap} posti) vengono riempite, `
-      : 'Se la campagna raggiunge il Full bloom, '
+      ? `Se tutte le blooming drops previste al tetto fioritura (${cap} posti) vengono riempite, `
+      : 'Se la campagna raggiunge la fioritura completa, '
   return (
     `${capBit}ogni Drop può scendere al massimo da ${max} a ${min}. ` +
-    'Qui “quote” / “drops” = quante adesioni (posti); “valore della Drop” = quanto euro per quella quota. ' +
+    'Growing / blooming = quante adesioni (posti); “valore della Drop” = quanto euro per quella quota. ' +
     'La differenza tra offerta iniziale e offerta finale è lo spazio delle droplet: come le gestisce il creator (beneficenza, SoFu, trattenuta) lo chiariremo in piattaforma.'
   )
 }
 
 export const DROP_QUOTE_VS_VALUE_HINT =
-  'Per non confondere: il numero (es. Blooming drops) è “quanti posti” servono per il Bloom; l’euro accanto è “quanto costa una quota” a quel punto della campagna.'
+  'Per non confondere: prima del Bloom parliamo di growing drops (posti in crescita); dopo il Bloom, di blooming drops verso il tetto fioritura. L’euro accanto alle soglie è “quanto costa una quota” in quel momento.'
 
 export const DROP_DROPLETS_AND_CREATOR =
   'Le droplet sono la differenza tra offerta iniziale e offerta finale della Drop: restano in capo a chi ha creato la campagna (come nel crowdfunding classico) — in beneficenza, in parte su SoFu per altre campagne, o in trattenuta — secondo le opzioni che la piattaforma metterà a disposizione.'

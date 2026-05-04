@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Backoffice\Http\Controllers\BackofficeSofuFeeWaiverController;
 use App\Modules\Campaigns\Http\Controllers\CampaignController;
 use App\Modules\Campaigns\Http\Controllers\CampaignMediaController;
 use Illuminate\Support\Facades\Route;
@@ -35,4 +36,5 @@ Route::prefix('campaigns')->name('campaigns.')->group(function (): void {
 Route::prefix('backoffice/campaigns')->middleware('auth:sanctum')->name('backoffice.campaigns.')->group(function (): void {
     Route::post('/{campaign:slug}/approve', [CampaignController::class, 'approve'])->name('approve');
     Route::post('/{campaign:slug}/reject', [CampaignController::class, 'reject'])->name('reject');
+    Route::post('/{campaign:slug}/sofu-fee-waiver', [BackofficeSofuFeeWaiverController::class, 'store'])->name('sofu-fee-waiver');
 });

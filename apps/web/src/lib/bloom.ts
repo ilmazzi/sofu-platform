@@ -1,8 +1,9 @@
 /**
  * Bloom / Full bloom (UI e regole business in evoluzione).
- * Modello d’intesa: fino al Bloom il valore della Drop dell’aderente resta quello d’ingresso; dopo il Bloom può
- * scendere verso il minimo fino a Full bloom o chiusura. L’addebito non coincide con la sola offerta sul sito.
- * Allineato al backend: `Campaign::hasReachedBloom()` — obiettivo quote Bloom o campagna successful/closed.
+ * Naming UI: prima del Bloom le adesioni contano come **growing drops** (crescita seme → Bloom); dopo il Bloom
+ * diventano **blooming drops** (fioritura verso il tetto). Il valore della Drop resta quello d’ingresso fino al Bloom;
+ * dopo può scendere verso il minimo fino a full bloom o chiusura. L’addebito non coincide con la sola offerta sul sito.
+ * Backend: `Campaign::hasReachedBloom()` — obiettivo growing drops o campagna successful/closed.
  */
 
 export type BloomCampaignFields = {

@@ -13,7 +13,8 @@ class RecordCapturedPaymentLedgerEntriesAction
 {
     private const PROVIDER_FEE_BASIS_POINTS = 270;
 
-    private const SOFU_FEE_BASIS_POINTS = 230;
+    /** Allineato a {@see \App\Modules\Campaigns\Domain\SofuPlatformFee::BASIS_POINTS} (2,5%). */
+    private const SOFU_FEE_BASIS_POINTS = 250;
 
     public function __construct(
         private readonly AuditLogger $audit,
@@ -29,9 +30,11 @@ class RecordCapturedPaymentLedgerEntriesAction
 
         $grossAmountCents = $payment->amount_cents;
         $providerFeeCents = $this->basisPoints($grossAmountCents, self::PROVIDER_FEE_BASIS_POINTS);
-        $sofuFeeCents = $this->basisPoints($grossAmountCents, self::SOFU_FEE_BASIS_POINTS);
+        $campaign = $payment->reservation->campaign;
+        $sofuBps = $campaign->appliesSofuPlatformFeeOnPayments() ? self::SOFU_FEE_BASIS_POINTS : 0;
+        $sofuFeeCents = $this->basisPoints($grossAmountCents, $sofuBps);
         $creatorPayableCents = $grossAmountCents - $providerFeeCents - $sofuFeeCents;
-        $creatorId = $payment->reservation->campaign->creator_id;
+        $creatorId = $campaign->creator_id;
 
         $metadata = [
             'payment_id' => $payment->id,
@@ -44,7 +47,7 @@ class RecordCapturedPaymentLedgerEntriesAction
             'basis_points' => self::PROVIDER_FEE_BASIS_POINTS,
         ]);
         $this->entry(LedgerAccounts::SOFU_REVENUE, LedgerEntryDirection::Credit, $sofuFeeCents, $payment, $metadata + [
-            'basis_points' => self::SOFU_FEE_BASIS_POINTS,
+            'basis_points' => $sofuBps,
         ]);
         $this->entry(LedgerAccounts::creatorPayable($creatorId), LedgerEntryDirection::Credit, $creatorPayableCents, $payment, $metadata);
 

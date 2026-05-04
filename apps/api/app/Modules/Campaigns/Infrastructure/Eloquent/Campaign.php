@@ -4,6 +4,8 @@ namespace App\Modules\Campaigns\Infrastructure\Eloquent;
 
 use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
+use App\Modules\Campaigns\Domain\Enums\SofuFeeWaiverState;
+use App\Modules\Campaigns\Domain\SofuPlatformFee;
 use App\Modules\Pricing\Infrastructure\Eloquent\CampaignPriceSnapshot;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use App\Support\Audit\AuditLog;
@@ -30,6 +32,9 @@ class Campaign extends Model
         'status',
         'currency',
         'is_commercial',
+        'sofu_fee_waiver_requested',
+        'sofu_fee_waiver_state',
+        'sofu_fee_waiver_review_note',
         'target_supporters',
         'full_bloom_drops',
         'active_reservations_count',
@@ -49,6 +54,8 @@ class Campaign extends Model
             'target_supporters' => 'integer',
             'full_bloom_drops' => 'integer',
             'is_commercial' => 'boolean',
+            'sofu_fee_waiver_requested' => 'boolean',
+            'sofu_fee_waiver_state' => SofuFeeWaiverState::class,
             'active_reservations_count' => 'integer',
             'min_price_cents' => 'integer',
             'max_price_cents' => 'integer',
@@ -92,6 +99,16 @@ class Campaign extends Model
             ->latest();
     }
 
+    /** Somma voci di costo (parziale), senza commissioni. */
+    public function costSubtotalCents(): int
+    {
+        if ($this->relationLoaded('costItems')) {
+            return (int) $this->costItems->sum('amount_cents');
+        }
+
+        return (int) $this->costItems()->sum('amount_cents');
+    }
+
     /**
      * Bloom: obiettivo sostenitori raggiunto, oppure campagna conclusa con successo.
      * Il contributo monetario si abilita solo da questo punto (promessa → pagamento).
@@ -107,5 +124,65 @@ class Campaign extends Model
         }
 
         return in_array($this->status, [CampaignStatus::Successful, CampaignStatus::Closed], true);
+    }
+
+    /** Obiettivo economico oltre 5.000 € e commissione SoFu non esonerata in revisione. */
+    public function appliesSofuPlatformFeeOnPayments(): bool
+    {
+        if ($this->costSubtotalCents() <= SofuPlatformFee::THRESHOLD_CENTS) {
+            return false;
+        }
+
+        return $this->sofu_fee_waiver_state !== SofuFeeWaiverState::Approved;
+    }
+
+    /** Impedisce approvazione campagna in revisione finché l’esenzione richiesta non è stata decisa. */
+    public function sofuFeeWaiverBlocksCampaignApproval(): bool
+    {
+        if ($this->costSubtotalCents() <= SofuPlatformFee::THRESHOLD_CENTS) {
+            return false;
+        }
+
+        return $this->sofu_fee_waiver_requested
+            && $this->sofu_fee_waiver_state === SofuFeeWaiverState::Pending;
+    }
+
+    /**
+     * Aggiorna stato esenzione in base alla scelta del creator e al parziale voci di costo.
+     *
+     * @param  ?int  $previousCostSubtotalCents  null in creazione
+     */
+    public function applyCreatorSofuFeeWaiverChoice(bool $requested, ?int $previousCostSubtotalCents): void
+    {
+        $subtotal = $this->costSubtotalCents();
+
+        if ($subtotal <= SofuPlatformFee::THRESHOLD_CENTS) {
+            $this->sofu_fee_waiver_requested = false;
+            $this->sofu_fee_waiver_state = SofuFeeWaiverState::NotRequested;
+            $this->sofu_fee_waiver_review_note = null;
+
+            return;
+        }
+
+        $this->sofu_fee_waiver_requested = $requested;
+
+        if (! $requested) {
+            $this->sofu_fee_waiver_state = SofuFeeWaiverState::NotRequested;
+            $this->sofu_fee_waiver_review_note = null;
+
+            return;
+        }
+
+        if ($this->sofu_fee_waiver_state === SofuFeeWaiverState::Approved) {
+            if ($previousCostSubtotalCents !== null && $previousCostSubtotalCents !== $subtotal) {
+                $this->sofu_fee_waiver_state = SofuFeeWaiverState::Pending;
+                $this->sofu_fee_waiver_review_note = null;
+            }
+
+            return;
+        }
+
+        $this->sofu_fee_waiver_state = SofuFeeWaiverState::Pending;
+        $this->sofu_fee_waiver_review_note = null;
     }
 }

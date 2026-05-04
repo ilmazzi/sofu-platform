@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
+use App\Modules\Campaigns\Domain\Enums\SofuFeeWaiverState;
+use App\Modules\Campaigns\Domain\SofuPlatformFee;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -52,6 +54,54 @@ class CampaignLifecycleTest extends TestCase
 
         $this
             ->actingAs(User::factory()->operator()->create())
+            ->postJson("/api/v1/backoffice/campaigns/{$campaign->slug}/approve")
+            ->assertOk()
+            ->assertJsonPath('data.status', CampaignStatus::Approved->value);
+    }
+
+    public function test_operator_cannot_approve_while_sofu_fee_waiver_pending(): void
+    {
+        $campaign = Campaign::factory()->create([
+            'status' => CampaignStatus::SubmittedForReview,
+            'sofu_fee_waiver_requested' => true,
+            'sofu_fee_waiver_state' => SofuFeeWaiverState::Pending,
+        ]);
+        $campaign->costItems()->create([
+            'label' => 'Obiettivo',
+            'amount_cents' => SofuPlatformFee::THRESHOLD_CENTS + 1000,
+            'sort_order' => 0,
+        ]);
+
+        $this
+            ->actingAs(User::factory()->operator()->create())
+            ->postJson("/api/v1/backoffice/campaigns/{$campaign->slug}/approve")
+            ->assertUnprocessable();
+    }
+
+    public function test_operator_can_decide_sofu_fee_waiver_then_approve(): void
+    {
+        $operator = User::factory()->operator()->create();
+        $campaign = Campaign::factory()->create([
+            'status' => CampaignStatus::SubmittedForReview,
+            'sofu_fee_waiver_requested' => true,
+            'sofu_fee_waiver_state' => SofuFeeWaiverState::Pending,
+        ]);
+        $campaign->costItems()->create([
+            'label' => 'Obiettivo',
+            'amount_cents' => SofuPlatformFee::THRESHOLD_CENTS + 1000,
+            'sort_order' => 0,
+        ]);
+
+        $this
+            ->actingAs($operator)
+            ->postJson("/api/v1/backoffice/campaigns/{$campaign->slug}/sofu-fee-waiver", [
+                'decision' => 'approve',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.sofu_fee_waiver_state', SofuFeeWaiverState::Approved->value);
+
+        $this
+            ->actingAs($operator)
             ->postJson("/api/v1/backoffice/campaigns/{$campaign->slug}/approve")
             ->assertOk()
             ->assertJsonPath('data.status', CampaignStatus::Approved->value);

@@ -33,6 +33,16 @@ type CampaignWrapped = { data: Campaign }
 
 type CostRow = { label: string; amountEuro: string }
 
+/** Somma voci di costo oltre la quale si applica il 2,5% SoFu (5.000,00 €), come `SofuPlatformFee::THRESHOLD_CENTS`. */
+const SOFU_PLATFORM_FEE_THRESHOLD_CENTS = 500_000
+const SOFU_FEE_THRESHOLD_EUROS = SOFU_PLATFORM_FEE_THRESHOLD_CENTS / 100
+
+const FEE_BASIS_POINTS = 250
+
+function basisPointsAmountCents(partialCents: number): number {
+  return Math.round((partialCents * FEE_BASIS_POINTS) / 10_000)
+}
+
 const DESCRIPTION_PLACEHOLDER = `Descrivi obiettivi della campagna, cosa ottengono i sostenitori e tempistiche. Il testo deve avere almeno 50 caratteri per superare la validazione.`
 
 const DURATION_PRESETS = [
@@ -52,8 +62,9 @@ function sumCostCents(rows: CostRow[]): number {
   return t
 }
 
-function defaultFullBloomDrops(totalCents: number, n: number): number {
-  return Math.max(Math.ceil(totalCents / 100), n + 1)
+/** Tetto blooming drops di default da obiettivo lordo (centesimi) e soglia Bloom. */
+function defaultFullBloomDrops(grossPoolCents: number, n: number): number {
+  return Math.max(Math.ceil(grossPoolCents / 100), n + 1)
 }
 
 export default function CampaignFormPage(): ReactElement {
@@ -70,8 +81,14 @@ export default function CampaignFormPage(): ReactElement {
   const [description, setDescription] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [category, setCategory] = useState<string | null>('')
-  const [isCommercial, setIsCommercial] = useState(false)
-  const [bloomingDrops, setBloomingDrops] = useState<number | string>(50)
+  const [sofuFeeWaiverRequested, setSofuFeeWaiverRequested] = useState(false)
+  const [waiverState, setWaiverState] = useState<
+    'not_requested' | 'pending' | 'approved' | 'rejected' | null
+  >(null)
+  const [waiverReviewNote, setWaiverReviewNote] = useState<string | null>(null)
+  /** Parziale caricato dal server (modifica), per allineare l’anteprima lorda all’esenzione approvata. */
+  const [loadedCostSubtotalCents, setLoadedCostSubtotalCents] = useState<number | null>(null)
+  const [growingDrops, setGrowingDrops] = useState<number | string>(50)
   const [fullBloomDrops, setFullBloomDrops] = useState<number | string>('')
   const [maxDropEuro, setMaxDropEuro] = useState('0')
   const [durationPreset, setDurationPreset] = useState<string | null>('30')
@@ -85,15 +102,42 @@ export default function CampaignFormPage(): ReactElement {
   const [imageFiles, setImageFiles] = useState<File[]>([])
 
   const totalCents = useMemo(() => sumCostCents(costRows), [costRows])
-  const partialEuro = totalCents / 100
-  const txFeeEuro = partialEuro * 0.025
-  const sofuFeeEuro = isCommercial && partialEuro > 5000 ? partialEuro * 0.025 : 0
-  const grandTotalEuro = partialEuro + txFeeEuro + sofuFeeEuro
+  const overSofuThreshold = totalCents > SOFU_PLATFORM_FEE_THRESHOLD_CENTS
 
-  const n = Number(bloomingDrops) || 0
+  const includeSofuLineInGross = useMemo((): boolean => {
+    if (totalCents <= SOFU_PLATFORM_FEE_THRESHOLD_CENTS) return false
+    if (
+      isEdit &&
+      waiverState === 'approved' &&
+      sofuFeeWaiverRequested &&
+      loadedCostSubtotalCents !== null &&
+      totalCents === loadedCostSubtotalCents
+    ) {
+      return false
+    }
+    return true
+  }, [totalCents, isEdit, waiverState, sofuFeeWaiverRequested, loadedCostSubtotalCents])
+
+  const grossPoolCents = useMemo(() => {
+    if (totalCents <= 0) return 0
+    const tx = basisPointsAmountCents(totalCents)
+    const sofu = includeSofuLineInGross ? basisPointsAmountCents(totalCents) : 0
+    return totalCents + tx + sofu
+  }, [totalCents, includeSofuLineInGross])
+
+  const txFeeCents = totalCents > 0 ? basisPointsAmountCents(totalCents) : 0
+  const sofuFeeCents =
+    totalCents > SOFU_PLATFORM_FEE_THRESHOLD_CENTS && includeSofuLineInGross
+      ? basisPointsAmountCents(totalCents)
+      : 0
+  const txFeeEuro = txFeeCents / 100
+  const sofuFeeEuro = sofuFeeCents / 100
+  const grandTotalEuro = grossPoolCents / 100
+
+  const n = Number(growingDrops) || 0
   const m = Number(fullBloomDrops) || 0
   const minDropCents =
-    m > 0 && totalCents > 0 ? Math.max(1, Math.round(totalCents / m)) : 0
+    m > 0 && grossPoolCents > 0 ? Math.max(1, Math.round(grossPoolCents / m)) : 0
 
   useEffect(() => {
     if (!isEdit || !editSlug) return
@@ -113,8 +157,12 @@ export default function CampaignFormPage(): ReactElement {
         setDescription(c.description ?? '')
         setVideoUrl(c.video_url ?? '')
         setCategory(c.category ?? '')
-        setIsCommercial(Boolean(c.is_commercial))
-        setBloomingDrops(c.target_supporters)
+        setSofuFeeWaiverRequested(Boolean(c.sofu_fee_waiver_requested))
+        setWaiverState(
+          (c.sofu_fee_waiver_state as 'not_requested' | 'pending' | 'approved' | 'rejected') ?? null,
+        )
+        setWaiverReviewNote(c.sofu_fee_waiver_review_note ?? null)
+        setGrowingDrops(c.target_supporters)
         setFullBloomDrops(c.full_bloom_drops ?? '')
         setMaxDropEuro(formatCentsAsEuroField(c.max_price_cents))
         if (c.ends_at) {
@@ -132,6 +180,10 @@ export default function CampaignFormPage(): ReactElement {
             amountEuro: formatCentsAsEuroField(it.amount_cents),
           })),
         )
+        const loadedSub =
+          c.cost_subtotal_cents ??
+          (c.cost_items ?? []).reduce((s, it) => s + it.amount_cents, 0)
+        setLoadedCostSubtotalCents(loadedSub)
         setLoadError(null)
         setInitialLoaded(true)
       } catch {
@@ -145,17 +197,23 @@ export default function CampaignFormPage(): ReactElement {
 
   useEffect(() => {
     if (isEdit) return
-    if (totalCents <= 0 || n < 1) return
-    const maxC = Math.max(1, Math.ceil(totalCents / n))
+    if (grossPoolCents <= 0 || n < 1) return
+    const maxC = Math.max(1, Math.ceil(grossPoolCents / n))
     setMaxDropEuro(formatCentsAsEuroField(maxC))
-  }, [isEdit, totalCents, n])
+  }, [isEdit, grossPoolCents, n])
 
   useEffect(() => {
     if (isEdit) return
     if (fullBloomDrops !== '') return
-    if (totalCents <= 0 || n < 1) return
-    setFullBloomDrops(defaultFullBloomDrops(totalCents, n))
-  }, [isEdit, totalCents, n, fullBloomDrops])
+    if (grossPoolCents <= 0 || n < 1) return
+    setFullBloomDrops(defaultFullBloomDrops(grossPoolCents, n))
+  }, [isEdit, grossPoolCents, n, fullBloomDrops])
+
+  useEffect(() => {
+    if (totalCents <= SOFU_PLATFORM_FEE_THRESHOLD_CENTS) {
+      setSofuFeeWaiverRequested(false)
+    }
+  }, [totalCents])
 
   const isCreator = user?.role === 'creator' || user?.role === 'operator' || user?.role === 'admin'
 
@@ -171,11 +229,11 @@ export default function CampaignFormPage(): ReactElement {
     setCostRows((rows) => rows.filter((_, j) => j !== i))
   }
 
-  function onBloomingChange(v: number | string): void {
-    setBloomingDrops(v)
+  function onGrowingChange(v: number | string): void {
+    setGrowingDrops(v)
     const nn = Number(v) || 0
-    if (totalCents > 0 && nn > 0) {
-      const maxC = Math.max(1, Math.ceil(totalCents / nn))
+    if (grossPoolCents > 0 && nn > 0) {
+      const maxC = Math.max(1, Math.ceil(grossPoolCents / nn))
       setMaxDropEuro(formatCentsAsEuroField(maxC))
     }
   }
@@ -183,9 +241,9 @@ export default function CampaignFormPage(): ReactElement {
   function onMaxDropEuroChange(val: string): void {
     setMaxDropEuro(val)
     const maxC = parseEuroInputToCents(val)
-    if (maxC !== null && maxC > 0 && totalCents > 0) {
-      const nn = Math.max(1, Math.ceil(totalCents / maxC))
-      setBloomingDrops(nn)
+    if (maxC !== null && maxC > 0 && grossPoolCents > 0) {
+      const nn = Math.max(1, Math.ceil(grossPoolCents / maxC))
+      setGrowingDrops(nn)
     }
   }
 
@@ -202,11 +260,11 @@ export default function CampaignFormPage(): ReactElement {
     setError(null)
     if (!user) return
 
-    const nn = Number(bloomingDrops)
-    const mm = Number(fullBloomDrops) || defaultFullBloomDrops(totalCents, nn)
+    const nn = Number(growingDrops)
+    const mm = Number(fullBloomDrops) || defaultFullBloomDrops(grossPoolCents, nn)
 
     if (!(nn >= 1)) {
-      setError('Imposta un numero valido di Blooming drops.')
+      setError('Imposta un numero valido di Growing drops.')
       return
     }
 
@@ -237,7 +295,8 @@ export default function CampaignFormPage(): ReactElement {
       description: description.trim(),
       video_url: hasVideo ? v : null,
       category: catVal.length > 0 ? catVal : null,
-      is_commercial: isCommercial,
+      is_commercial: false,
+      sofu_fee_waiver_requested: overSofuThreshold && sofuFeeWaiverRequested,
       currency: 'EUR',
       target_supporters: nn,
       full_bloom_drops: mm,
@@ -287,7 +346,17 @@ export default function CampaignFormPage(): ReactElement {
         setError('Risposta imprevista dal server.')
         return
       }
-      const s = json.data.slug
+      const saved = json.data
+      setSofuFeeWaiverRequested(Boolean(saved.sofu_fee_waiver_requested))
+      setWaiverState(
+        (saved.sofu_fee_waiver_state as 'not_requested' | 'pending' | 'approved' | 'rejected') ?? null,
+      )
+      setWaiverReviewNote(saved.sofu_fee_waiver_review_note ?? null)
+      setLoadedCostSubtotalCents(
+        saved.cost_subtotal_cents ??
+          (saved.cost_items ?? []).reduce((s, it) => s + it.amount_cents, 0),
+      )
+      const s = saved.slug
 
       if (imageFiles.length > 0) {
         const fd = new FormData()
@@ -419,7 +488,7 @@ export default function CampaignFormPage(): ReactElement {
         shadow="sm"
       >
         <Stack gap="xl">
-          {/* Ordine come da brief: identità e contenuto → Bloom economico → quote → Full bloom → durata → media */}
+          {/* Ordine: identità e contenuto → Bloom economico → Growing drops → Blooming drops (tetto) → durata → media */}
 
           <TextInput
             label="Nome campagna"
@@ -528,19 +597,42 @@ export default function CampaignFormPage(): ReactElement {
               </Text>
             </Group>
             <Group justify="space-between">
-              <Text size="sm" c="dimmed">
-                Gestione SoFu — 2,5% sulle campagne commerciali che superano i 5.000 euro
+              <Text size="sm" c="dimmed" maw={520}>
+                Commissione SoFu — 2,5% sul parziale se supera {SOFU_FEE_THRESHOLD_EUROS.toLocaleString('it-IT')}{' '}
+                € (calcolata mentre componi le voci). Opt-out: puoi chiedere l’esenzione per no-profit / raccolta fondi; la
+                decisione avviene in revisione.
               </Text>
               <Text size="sm" c="dimmed" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {sofuFeeEuro > 0
+                {overSofuThreshold
                   ? sofuFeeEuro.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
                   : '—'}
               </Text>
             </Group>
+            {overSofuThreshold && waiverState === 'pending' ? (
+              <Text size="xs" c="orange.8" lh={1.5}>
+                Hai chiesto l’esenzione: finché la revisione non decide, qui mostriamo comunque il 2,5% come riferimento.
+              </Text>
+            ) : null}
+            {overSofuThreshold && waiverState === 'approved' ? (
+              <Text size="xs" c="teal.8" lh={1.5}>
+                Esenzione concessa in revisione: nessuna commissione SoFu sull’obiettivo.
+              </Text>
+            ) : null}
+            {overSofuThreshold && waiverState === 'rejected' && waiverReviewNote ? (
+              <Alert color="red" variant="light">
+                <Text size="xs">Esenzione non concessa: {waiverReviewNote}</Text>
+              </Alert>
+            ) : null}
             <Checkbox
-              label="Campagna commerciale (attiva la commissione SoFu sopra soglia)"
-              checked={isCommercial}
-              onChange={(e) => setIsCommercial(e.currentTarget.checked)}
+              label="Richiedi esenzione dalla commissione SoFu (es. no-profit, raccolta fondi senza budget infrastruttura)"
+              description={
+                overSofuThreshold
+                  ? 'In revisione valuteremo se concederla; se non è possibile, riceverai una motivazione.'
+                  : `Disponibile se il parziale supera ${SOFU_FEE_THRESHOLD_EUROS.toLocaleString('it-IT')} €.`
+              }
+              checked={sofuFeeWaiverRequested}
+              disabled={!overSofuThreshold}
+              onChange={(e) => setSofuFeeWaiverRequested(e.currentTarget.checked)}
             />
             <Divider />
             <Group justify="space-between">
@@ -554,18 +646,18 @@ export default function CampaignFormPage(): ReactElement {
           <Divider />
 
           <Stack gap="md">
-            <Title order={5}>Blooming drops — quote necessarie per raggiungere il Bloom</Title>
+            <Title order={5}>Growing drops — quote in crescita fino al Bloom</Title>
             <Text size="sm" c="dimmed" maw={820} lh={1.65}>
+              Prima del Bloom non parliamo ancora di “fioritura”: sono drop in crescita dal seme alla soglia di Bloom.
               È importante scindere il numero di quote dal numero di persone: chi sosterrà potrà prendere più prodotti, e
-              chi crea la campagna ragiona sulle quote. Una volta inserito il numero di Blooming drops, il campo
-              successivo si aggiorna in automatico — e viceversa: restano entrambi modificabili e collegati (anche sulla
-              stessa riga).
+              chi crea la campagna ragiona sulle quote. Inserendo il numero di Growing drops, il campo successivo si
+              aggiorna in automatico — e viceversa: restano entrambi modificabili e collegati (anche sulla stessa riga).
             </Text>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               <NumberInput
-                label="Blooming drops"
-                value={bloomingDrops}
-                onChange={onBloomingChange}
+                label="Growing drops"
+                value={growingDrops}
+                onChange={onGrowingChange}
                 min={1}
                 required
                 radius="md"
@@ -585,22 +677,19 @@ export default function CampaignFormPage(): ReactElement {
           <Divider />
 
           <Stack gap="md">
-            <Title order={5}>
-              Full bloom — una volta raggiunto il numero necessario di offerte, la campagna è da considerarsi in fiore
-            </Title>
+            <Title order={5}>Blooming drops — dopo il Bloom, la fioritura</Title>
             <Text size="sm" c="dimmed" maw={820} lh={1.65}>
-              Da qui si sprigiona il vero potenziale di SoFu: ogni quota che si aggiunge permette a chiunque di
-              risparmiare, diminuendo l’offerta necessaria per chiunque sostenga la campagna.
+              Quando l’obiettivo di Growing drops è raggiunto, la campagna è andata a buon fine e le adesioni entrano in
+              fase blooming: ogni nuova quota aiuta la fioritura e può far scendere l’offerta per tutti.
             </Text>
             <Text size="sm" c="dimmed" maw={820} lh={1.65}>
-              Una campagna raggiunge la soglia di Bloom grazie alle Blooming drops, il numero minimo di offerte per
-              raggiungere la cifra che vuoi raccogliere; dopo la fioritura, ogni nuova offerta avvicina alla Full bloom —
-              quando si è raccolto il massimo numero di quote. Nei tutorial approfondiremo minimo e massimo in questa
-              logica.
+              Il tetto qui sotto è il numero massimo di blooming drops (posti) verso la fioritura completa; insieme
+              all’obiettivo economico definisce anche l’offerta minima possibile. Nei tutorial approfondiremo minimo e
+              massimo in questa logica.
             </Text>
             <NumberInput
-              label="Full bloom drops — numero massimo di quote possibili"
-              description="Es. massimo oggetti o biglietti; se lasci vuoto, proponiamo un default legato all’obiettivo (es. verso ~1 € a quota minima)."
+              label="Blooming drops — tetto quote (fioritura completa)"
+              description="Es. massimo oggetti o biglietti in fase blooming; se lasci vuoto, proponiamo un default legato all’obiettivo."
               value={fullBloomDrops}
               onChange={setFullBloomDrops}
               min={1}
@@ -608,8 +697,8 @@ export default function CampaignFormPage(): ReactElement {
             />
             <TextInput
               label="Valore minimo Drop — offerta finale limite (€)"
-              description="Calcolato automaticamente: obiettivo ÷ Full bloom drops. Non modificabile."
-              value={m > 0 && totalCents > 0 ? formatCentsAsEuroField(minDropCents) : '—'}
+              description="Calcolato automaticamente: obiettivo lordo (parziale + commissioni) ÷ tetto blooming drops. Non modificabile."
+              value={m > 0 && grossPoolCents > 0 ? formatCentsAsEuroField(minDropCents) : '—'}
               disabled
               radius="md"
             />

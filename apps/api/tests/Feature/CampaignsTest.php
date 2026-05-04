@@ -38,16 +38,17 @@ class CampaignsTest extends TestCase
             ->assertJsonPath('data.type', 'campaign')
             ->assertJsonPath('data.status', CampaignStatus::Draft->value)
             ->assertJsonPath('data.currency', 'EUR')
-            ->assertJsonPath('data.current_price_cents', 3500)
-            ->assertJsonPath('data.min_price_cents', 1050)
-            ->assertJsonPath('data.total_amount_cents', 420000)
+            ->assertJsonPath('data.current_price_cents', 3588)
+            ->assertJsonPath('data.min_price_cents', 1076)
+            ->assertJsonPath('data.total_amount_cents', 430500)
+            ->assertJsonPath('data.cost_subtotal_cents', 420000)
             ->assertJsonCount(2, 'data.cost_items')
             ->assertJsonPath('data.media_urls', []);
 
         $this->assertDatabaseHas('campaigns', [
             'creator_id' => $user->id,
             'status' => CampaignStatus::Draft->value,
-            'total_amount_cents' => 420000,
+            'total_amount_cents' => 430500,
         ]);
 
         $this->assertDatabaseHas('campaign_cost_items', [

@@ -55,6 +55,8 @@ final class AuditActions
 
     public const CAMPAIGN_PRICE_CHANGED = 'campaign.price_changed';
 
+    public const CAMPAIGN_SOFU_FEE_WAIVER_DECIDED = 'campaign.sofu_fee_waiver.decided';
+
     public const RESERVATION_CREATED = 'reservation.created';
 
     public const RESERVATION_CANCELLED = 'reservation.cancelled';

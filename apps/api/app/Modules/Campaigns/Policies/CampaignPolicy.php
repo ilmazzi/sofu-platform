@@ -4,6 +4,8 @@ namespace App\Modules\Campaigns\Policies;
 
 use App\Models\User;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
+use App\Modules\Campaigns\Domain\Enums\SofuFeeWaiverState;
+use App\Modules\Campaigns\Domain\SofuPlatformFee;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use Illuminate\Auth\Access\Response;
 
@@ -91,6 +93,27 @@ class CampaignPolicy
     public function reject(User $user, Campaign $campaign): bool
     {
         return $user->isBackoffice() && $campaign->status === CampaignStatus::SubmittedForReview;
+    }
+
+    public function decideSofuFeeWaiver(User $user, Campaign $campaign): bool
+    {
+        if (! $user->isBackoffice()) {
+            return false;
+        }
+
+        if ($campaign->status !== CampaignStatus::SubmittedForReview) {
+            return false;
+        }
+
+        if ($campaign->costSubtotalCents() <= SofuPlatformFee::THRESHOLD_CENTS) {
+            return false;
+        }
+
+        if (! $campaign->sofu_fee_waiver_requested) {
+            return false;
+        }
+
+        return $campaign->sofu_fee_waiver_state === SofuFeeWaiverState::Pending;
     }
 
     public function uploadMedia(User $user, Campaign $campaign): bool|Response

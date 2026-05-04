@@ -817,6 +817,7 @@ export interface paths {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 409: components["responses"]["InvalidCampaignTransition"];
+                422: components["responses"]["ValidationError"];
             };
         };
         delete?: never;
@@ -858,6 +859,51 @@ export interface paths {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 409: components["responses"]["InvalidCampaignTransition"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backoffice/campaigns/{slug}/sofu-fee-waiver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide SoFu fee waiver request (operator/admin, campagna in revisione) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: components["parameters"]["CampaignSlug"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DecideSofuFeeWaiverRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CampaignWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["ValidationError"];
             };
         };
         delete?: never;
@@ -1510,6 +1556,8 @@ export interface components {
         };
         /** @enum {string} */
         CampaignStatus: "draft" | "submitted_for_review" | "approved" | "published" | "activated" | "successful" | "closed" | "rejected" | "cancelled" | "expired" | "failed";
+        /** @enum {string} */
+        SofuFeeWaiverState: "not_requested" | "pending" | "approved" | "rejected";
         CampaignCostItem: {
             id: string;
             /** @enum {string} */
@@ -1533,13 +1581,23 @@ export interface components {
             status: components["schemas"]["CampaignStatus"];
             currency: string;
             is_commercial?: boolean;
+            /** @description Richiesta di esenzione dalla commissione SoFu (2,5% oltre 5.000 € di obiettivo). Valutata in revisione. */
+            sofu_fee_waiver_requested?: boolean;
+            sofu_fee_waiver_state?: components["schemas"]["SofuFeeWaiverState"];
+            /** @description Motivazione operatore in caso di diniego esenzione. */
+            sofu_fee_waiver_review_note?: string | null;
+            /** @description Obiettivo growing drops (soglia Bloom) */
             target_supporters: number;
+            /** @description Tetto blooming drops (fioritura completa) */
             full_bloom_drops?: number | null;
             active_reservations_count: number;
             min_price_cents: number;
             max_price_cents: number;
             current_price_cents: number;
+            /** @description Obiettivo lordo da ripartire tra le drop: somma voci di costo + commissione transazione (2,5%) + eventuale riga SoFu (2,5% oltre soglia, salvo esenzione approvata). */
             total_amount_cents: number;
+            /** @description Somma delle voci di costo (parziale), senza commissioni. Presente quando la risposta include `cost_items`. */
+            cost_subtotal_cents?: number | null;
             cost_items?: components["schemas"]["CampaignCostItem"][];
             /** @description Public URLs for uploaded gallery images (order preserved). Empty when none. */
             media_urls?: string[];
@@ -1567,9 +1625,11 @@ export interface components {
             /** @description ISO 4217; defaults to EUR when omitted */
             currency?: string;
             is_commercial?: boolean;
-            /** @description Blooming drops — minimum quotes to reach Bloom */
+            /** @description Se true, chiedi in revisione di non applicare la commissione SoFu (es. no-profit / raccolta fondi). */
+            sofu_fee_waiver_requested?: boolean;
+            /** @description Growing drops — numero minimo di quote in crescita (seme → Bloom) per far sbocciare la campagna. */
             target_supporters: number;
-            /** @description Maximum quotes at full bloom (defines minimum drop value) */
+            /** @description Blooming drops (tetto) — massimo posti in fase di fioritura dopo il Bloom; definisce anche l’offerta minima. */
             full_bloom_drops: number;
             /** @description Campaign length in days from creation/update (default 30) */
             duration_days?: number;
@@ -1579,6 +1639,12 @@ export interface components {
             }[];
         };
         UpdateCampaignRequest: components["schemas"]["StoreCampaignRequest"];
+        DecideSofuFeeWaiverRequest: {
+            /** @enum {string} */
+            decision: "approve" | "reject";
+            /** @description Obbligatoria in caso di diniego; opzionale se concesso. */
+            note?: string | null;
+        };
         /** @enum {string} */
         ReservationStatus: "pending" | "active" | "cancelled" | "expired" | "converted_to_payment" | "failed";
         ReservationCampaignEmbed: {

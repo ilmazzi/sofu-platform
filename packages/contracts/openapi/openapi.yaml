@@ -470,6 +470,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/InvalidCampaignTransition'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /api/v1/backoffice/campaigns/{slug}/reject:
     post:
@@ -492,6 +494,34 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/InvalidCampaignTransition'
+
+  /api/v1/backoffice/campaigns/{slug}/sofu-fee-waiver:
+    post:
+      tags: [Campaigns]
+      summary: Decide SoFu fee waiver request (operator/admin, campagna in revisione)
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignSlug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecideSofuFeeWaiverRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /api/v1/campaigns/{slug}/reservations:
     post:
@@ -1073,6 +1103,14 @@ components:
         - expired
         - failed
 
+    SofuFeeWaiverState:
+      type: string
+      enum:
+        - not_requested
+        - pending
+        - approved
+        - rejected
+
     CampaignCostItem:
       type: object
       required: [id, type, label, amount_cents, sort_order]
@@ -1135,11 +1173,23 @@ components:
           type: string
         is_commercial:
           type: boolean
+        sofu_fee_waiver_requested:
+          type: boolean
+          description: >
+            Richiesta di esenzione dalla commissione SoFu (2,5% oltre 5.000 € di obiettivo). Valutata in revisione.
+        sofu_fee_waiver_state:
+          $ref: '#/components/schemas/SofuFeeWaiverState'
+        sofu_fee_waiver_review_note:
+          type: string
+          nullable: true
+          description: Motivazione operatore in caso di diniego esenzione.
         target_supporters:
           type: integer
+          description: Obiettivo growing drops (soglia Bloom)
         full_bloom_drops:
           type: integer
           nullable: true
+          description: Tetto blooming drops (fioritura completa)
         active_reservations_count:
           type: integer
         min_price_cents:
@@ -1150,6 +1200,14 @@ components:
           type: integer
         total_amount_cents:
           type: integer
+          description: >
+            Obiettivo lordo da ripartire tra le drop: somma voci di costo + commissione transazione (2,5%) +
+            eventuale riga SoFu (2,5% oltre soglia, salvo esenzione approvata).
+        cost_subtotal_cents:
+          type: integer
+          nullable: true
+          description: >
+            Somma delle voci di costo (parziale), senza commissioni. Presente quando la risposta include `cost_items`.
         cost_items:
           type: array
           items:
@@ -1211,12 +1269,18 @@ components:
           description: ISO 4217; defaults to EUR when omitted
         is_commercial:
           type: boolean
+        sofu_fee_waiver_requested:
+          type: boolean
+          description: >
+            Se true, chiedi in revisione di non applicare la commissione SoFu (es. no-profit / raccolta fondi).
         target_supporters:
           type: integer
-          description: Blooming drops — minimum quotes to reach Bloom
+          description: >
+            Growing drops — numero minimo di quote in crescita (seme → Bloom) per far sbocciare la campagna.
         full_bloom_drops:
           type: integer
-          description: Maximum quotes at full bloom (defines minimum drop value)
+          description: >
+            Blooming drops (tetto) — massimo posti in fase di fioritura dopo il Bloom; definisce anche l’offerta minima.
         duration_days:
           type: integer
           description: Campaign length in days from creation/update (default 30)
@@ -1235,6 +1299,18 @@ components:
     UpdateCampaignRequest:
       allOf:
         - $ref: '#/components/schemas/StoreCampaignRequest'
+
+    DecideSofuFeeWaiverRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        note:
+          type: string
+          nullable: true
+          description: Obbligatoria in caso di diniego; opzionale se concesso.
 
     ReservationStatus:
       type: string

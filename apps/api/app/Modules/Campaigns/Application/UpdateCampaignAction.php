@@ -16,17 +16,29 @@ class UpdateCampaignAction
 
     /**
      * @param  array<string, mixed>  $data
-     *                         Same shape as {@see CreateCampaignAction::execute()} input.
+     *                                      Same shape as {@see CreateCampaignAction::execute()} input.
      */
     public function execute(Campaign $campaign, User $actor, array $data): Campaign
     {
         return DB::transaction(function () use ($campaign, $actor, $data): Campaign {
             $locked = Campaign::query()->whereKey($campaign->id)->lockForUpdate()->firstOrFail();
+            $previousPartialCents = (int) $locked->costItems()->sum('amount_cents');
 
+            $partial = 0;
+            foreach ($data['cost_items'] as $item) {
+                $partial += (int) ($item['amount_cents'] ?? 0);
+            }
+            $includeSofu = CampaignEconomics::includeSofuPlatformLineForUpdate(
+                $locked,
+                $partial,
+                (bool) ($data['sofu_fee_waiver_requested'] ?? false),
+                $previousPartialCents,
+            );
             $economics = CampaignEconomics::deriveFromTargets(
                 $data['cost_items'],
                 $data['target_supporters'],
                 $data['full_bloom_drops'],
+                $includeSofu,
             );
 
             $days = (int) ($data['duration_days'] ?? 30);
@@ -52,8 +64,6 @@ class UpdateCampaignAction
                 $locked->current_price_cents = $economics['max_price_cents'];
             }
 
-            $locked->save();
-
             $locked->costItems()->delete();
             foreach ($data['cost_items'] as $index => $item) {
                 $locked->costItems()->create([
@@ -62,6 +72,15 @@ class UpdateCampaignAction
                     'sort_order' => $index,
                 ]);
             }
+
+            $locked->unsetRelation('costItems');
+
+            $locked->applyCreatorSofuFeeWaiverChoice(
+                (bool) ($data['sofu_fee_waiver_requested'] ?? false),
+                $previousPartialCents,
+            );
+
+            $locked->save();
 
             $this->audit->record(AuditActions::CAMPAIGN_UPDATED, $actor, $locked, [
                 'total_amount_cents' => $locked->total_amount_cents,

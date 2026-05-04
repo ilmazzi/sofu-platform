@@ -48,6 +48,7 @@ class StoreCampaignRequest extends FormRequest
             'category' => ['nullable', 'string', 'max:80', Rule::in(self::CATEGORY_VALUES)],
             'currency' => ['required', 'string', 'size:3'],
             'is_commercial' => ['sometimes', 'boolean'],
+            'sofu_fee_waiver_requested' => ['sometimes', 'boolean'],
             'target_supporters' => ['required', 'integer', 'min:1', 'max:1000000'],
             'full_bloom_drops' => ['required', 'integer', 'min:1', 'max:10000000'],
             'duration_days' => ['nullable', 'integer', 'min:1', 'max:730'],
@@ -77,7 +78,7 @@ class StoreCampaignRequest extends FormRequest
             if ($m < $n) {
                 $validator->errors()->add(
                     'full_bloom_drops',
-                    'Full bloom drops must be greater than or equal to blooming drops.',
+                    'Le blooming drops (tetto) devono essere maggiori o uguali alle growing drops (soglia Bloom).',
                 );
             }
 
@@ -91,7 +92,7 @@ class StoreCampaignRequest extends FormRequest
             if ($max <= $min) {
                 $validator->errors()->add(
                     'full_bloom_drops',
-                    'Adjust blooming drops and full bloom drops: the starting drop value must be greater than the minimum drop value.',
+                    'Regola growing drops e tetto blooming drops: l’offerta di partenza deve restare maggiore del minimo.',
                 );
             }
         });

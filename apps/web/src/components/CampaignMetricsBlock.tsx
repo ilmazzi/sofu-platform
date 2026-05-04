@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { Alert, Divider, Group, SimpleGrid, Stack, Text } from '@mantine/core'
 import type { components } from '@sofu/contracts'
+import { campaignHasReachedBloom } from '../lib/bloom'
 import {
   DROP_DROPLETS_AND_CREATOR,
   DROP_NO_IMMEDIATE_CHARGE,
@@ -24,6 +25,9 @@ export function CampaignMetricsBlock({
 }): ReactElement {
   const bodySm = compact ? 'xs' : 'sm'
   const fullBloom = c.full_bloom_drops ?? null
+  const bloomed = campaignHasReachedBloom(c)
+  const progressDenominator =
+    bloomed && fullBloom !== null && fullBloom > 0 ? fullBloom : c.target_supporters
 
   if (creatorPreview) {
     return (
@@ -31,10 +35,10 @@ export function CampaignMetricsBlock({
         <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="md" verticalSpacing="md">
           <div>
             <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
-              Blooming drops
+              Growing drops
             </Text>
             <Text size="xs" c="dimmed" mt={4}>
-              Quante quote servono per il Bloom (posti), non un importo in euro.
+              Quote in crescita dal seme fino al Bloom: quante servono perché la campagna “sbocci” (posti, non euro).
             </Text>
             <Text size={compact ? 'lg' : 'xl'} fw={800} lh={1.2} mt={4}>
               {c.target_supporters}
@@ -42,10 +46,10 @@ export function CampaignMetricsBlock({
           </div>
           <div>
             <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
-              Full bloom drops
+              Blooming drops (tetto)
             </Text>
             <Text size="xs" c="dimmed" mt={4}>
-              Tetto di quote se la campagna “fiorisce” del tutto.
+              Dopo il Bloom, le adesioni diventano blooming: tetto di posti per la fioritura completa.
             </Text>
             <Text size={compact ? 'lg' : 'xl'} fw={800} lh={1.2} mt={4}>
               {fullBloom ?? '—'}
@@ -86,14 +90,17 @@ export function CampaignMetricsBlock({
       <div>
         <Group justify="space-between" gap="xs" mb={6} wrap="nowrap">
           <Text size="xs" fw={600} c="dimmed">
-            Drop / quote Bloom
+            {bloomed ? 'Blooming drops' : 'Growing drops'}
           </Text>
           <Text size="xs" fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {c.active_reservations_count} / {c.target_supporters}
+            {c.active_reservations_count} / {progressDenominator}
           </Text>
         </Group>
         <Text size="xs" c="dimmed" mt={6}>
-          Quante adesioni verso il Bloom (numero di posti). {DROP_QUOTE_VS_VALUE_HINT}
+          {bloomed
+            ? `Dopo il Bloom le adesioni sono “in fiore”: avanzamento verso il tetto (${progressDenominator} posti). `
+            : 'Fase di crescita: adesioni raccolte fino al Bloom (posti, non importo in euro). '}
+          {DROP_QUOTE_VS_VALUE_HINT}
         </Text>
       </div>
 
@@ -129,7 +136,7 @@ export function CampaignMetricsBlock({
             {formatEuro(c.min_price_cents, c.currency)}
           </Text>
           <Text size="xs" c="dimmed" lh={1.45}>
-            Tetto basso se tutte le quote al Full bloom si riempiono
+            Tetto basso se tutte le blooming drops (tetto fioritura) si riempiono
           </Text>
         </div>
       </SimpleGrid>

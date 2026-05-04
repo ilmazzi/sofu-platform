@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Modules\Campaigns\Domain\Enums\SofuFeeWaiverState;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Modules\Ledger\Domain\LedgerAccounts;
 use App\Modules\Payments\Domain\Enums\PaymentStatus;
@@ -16,9 +17,9 @@ class LedgerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_captured_payment_records_append_only_ledger_entries(): void
+    public function test_captured_payment_below_sofu_threshold_has_no_sofu_fee(): void
     {
-        [$payment, $campaign] = $this->createPayment(amountCents: 5000);
+        [$payment, $campaign] = $this->createPayment(amountCents: 5000, campaignTotalCents: 50_000);
 
         $this
             ->postJson('/api/v1/payments/webhooks/mock', [
@@ -45,18 +46,74 @@ class LedgerTest extends TestCase
         $this->assertDatabaseHas('ledger_entries', [
             'account' => LedgerAccounts::SOFU_REVENUE,
             'direction' => 'credit',
-            'amount_cents' => 115,
+            'amount_cents' => 0,
             'source_id' => $payment->id,
         ]);
         $this->assertDatabaseHas('ledger_entries', [
             'account' => LedgerAccounts::creatorPayable($campaign->creator_id),
             'direction' => 'credit',
-            'amount_cents' => 4750,
+            'amount_cents' => 4865,
             'source_id' => $payment->id,
         ]);
         $this->assertDatabaseHas('audit_logs', [
             'action' => AuditActions::LEDGER_ENTRIES_RECORDED,
             'target_id' => $payment->id,
+        ]);
+    }
+
+    public function test_captured_payment_above_sofu_threshold_records_sofu_fee(): void
+    {
+        [$payment, $campaign] = $this->createPayment(amountCents: 5000, campaignTotalCents: 600_000);
+
+        $this
+            ->postJson('/api/v1/payments/webhooks/mock', [
+                'event_id' => 'evt_ledger_capture_high',
+                'type' => 'payment.captured',
+                'provider_payment_id' => $payment->provider_payment_id,
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('ledger_entries', [
+            'account' => LedgerAccounts::SOFU_REVENUE,
+            'direction' => 'credit',
+            'amount_cents' => 125,
+            'source_id' => $payment->id,
+        ]);
+        $this->assertDatabaseHas('ledger_entries', [
+            'account' => LedgerAccounts::creatorPayable($campaign->creator_id),
+            'direction' => 'credit',
+            'amount_cents' => 4740,
+            'source_id' => $payment->id,
+        ]);
+    }
+
+    public function test_waiver_approved_skips_sofu_fee_despite_high_target(): void
+    {
+        [$payment, $campaign] = $this->createPayment(
+            amountCents: 5000,
+            campaignTotalCents: 600_000,
+            sofuFeeWaived: true,
+        );
+
+        $this
+            ->postJson('/api/v1/payments/webhooks/mock', [
+                'event_id' => 'evt_ledger_waived',
+                'type' => 'payment.captured',
+                'provider_payment_id' => $payment->provider_payment_id,
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('ledger_entries', [
+            'account' => LedgerAccounts::SOFU_REVENUE,
+            'direction' => 'credit',
+            'amount_cents' => 0,
+            'source_id' => $payment->id,
+        ]);
+        $this->assertDatabaseHas('ledger_entries', [
+            'account' => LedgerAccounts::creatorPayable($campaign->creator_id),
+            'direction' => 'credit',
+            'amount_cents' => 4865,
+            'source_id' => $payment->id,
         ]);
     }
 
@@ -77,7 +134,7 @@ class LedgerTest extends TestCase
 
     public function test_operator_can_list_ledger_entries(): void
     {
-        [$payment] = $this->createPayment(amountCents: 5000);
+        [$payment] = $this->createPayment(amountCents: 5000, campaignTotalCents: 600_000);
 
         $this
             ->postJson('/api/v1/payments/webhooks/mock', [
@@ -93,23 +150,33 @@ class LedgerTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.account', LedgerAccounts::SOFU_REVENUE)
-            ->assertJsonPath('data.0.amount_cents', 115);
+            ->assertJsonPath('data.0.amount_cents', 125);
     }
 
     /**
      * @return array{0: Payment, 1: Campaign}
      */
-    private function createPayment(int $amountCents): array
+    private function createPayment(int $amountCents, ?int $campaignTotalCents = null, bool $sofuFeeWaived = false): array
     {
         $supporter = User::factory()->create();
         $creator = User::factory()->creator()->create();
+        $total = $campaignTotalCents ?? $amountCents;
         $campaign = Campaign::factory()->published()->create([
             'creator_id' => $creator->id,
-            'total_amount_cents' => $amountCents,
+            'total_amount_cents' => $total,
             'min_price_cents' => 1000,
             'max_price_cents' => $amountCents,
             'current_price_cents' => $amountCents,
             'target_supporters' => 1,
+            'sofu_fee_waiver_requested' => $sofuFeeWaived,
+            'sofu_fee_waiver_state' => $sofuFeeWaived
+                ? SofuFeeWaiverState::Approved
+                : SofuFeeWaiverState::NotRequested,
+        ]);
+        $campaign->costItems()->create([
+            'label' => 'Obiettivo test',
+            'amount_cents' => $total,
+            'sort_order' => 0,
         ]);
 
         $this

@@ -25,6 +25,7 @@ class CreateCampaignAction
      *     category?: string|null,
      *     currency: string,
      *     is_commercial?: bool,
+     *     sofu_fee_waiver_requested?: bool,
      *     target_supporters: int,
      *     full_bloom_drops: int,
      *     duration_days?: int|null,
@@ -34,10 +35,16 @@ class CreateCampaignAction
     public function execute(User $creator, array $data): Campaign
     {
         return DB::transaction(function () use ($creator, $data): Campaign {
+            $partial = 0;
+            foreach ($data['cost_items'] as $item) {
+                $partial += (int) ($item['amount_cents'] ?? 0);
+            }
+            $includeSofu = CampaignEconomics::includeSofuPlatformLineForCreate($partial);
             $economics = CampaignEconomics::deriveFromTargets(
                 $data['cost_items'],
                 $data['target_supporters'],
                 $data['full_bloom_drops'],
+                $includeSofu,
             );
 
             $days = (int) ($data['duration_days'] ?? 30);
@@ -71,6 +78,13 @@ class CreateCampaignAction
                     'amount_cents' => $item['amount_cents'],
                     'sort_order' => $index,
                 ]);
+            }
+
+            $campaign->unsetRelation('costItems');
+
+            $campaign->applyCreatorSofuFeeWaiverChoice((bool) ($data['sofu_fee_waiver_requested'] ?? false), null);
+            if ($campaign->isDirty()) {
+                $campaign->save();
             }
 
             $this->audit->record(AuditActions::CAMPAIGN_CREATED, $creator, $campaign, [

@@ -26,6 +26,9 @@ class CampaignResource extends JsonResource
             'status' => $this->status->value,
             'currency' => $this->currency,
             'is_commercial' => (bool) $this->is_commercial,
+            'sofu_fee_waiver_requested' => (bool) $this->sofu_fee_waiver_requested,
+            'sofu_fee_waiver_state' => $this->sofu_fee_waiver_state->value,
+            'sofu_fee_waiver_review_note' => $this->sofu_fee_waiver_review_note,
             'target_supporters' => $this->target_supporters,
             'full_bloom_drops' => $this->full_bloom_drops,
             'active_reservations_count' => $this->active_reservations_count,
@@ -33,6 +36,10 @@ class CampaignResource extends JsonResource
             'max_price_cents' => $this->max_price_cents,
             'current_price_cents' => $this->current_price_cents,
             'total_amount_cents' => $this->total_amount_cents,
+            'cost_subtotal_cents' => $this->when(
+                $this->relationLoaded('costItems'),
+                fn () => (int) $this->costItems->sum('amount_cents'),
+            ),
             'cost_items' => CampaignCostItemResource::collection($this->whenLoaded('costItems')),
             'media_urls' => $this->whenLoaded(
                 'media',

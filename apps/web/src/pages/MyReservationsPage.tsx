@@ -278,12 +278,12 @@ export default function MyReservationsPage(): ReactElement {
                           il Bloom, potrai confermare il pagamento.
                         </Alert>
                         <Text size="sm" fw={600}>
-                          Verso il Bloom
+                          Growing drops verso il Bloom
                         </Text>
                         <Progress value={bloomPct} size="md" radius="xl" color="teal" aria-label="Avanzamento Bloom" />
                         <Text size="xs" c="dimmed">
-                          {Math.round(bloomPct)}% — {c.active_reservations_count} / {c.target_supporters} persone nella
-                          campagna
+                          {Math.round(bloomPct)}% — {c.active_reservations_count} / {c.target_supporters} growing drops
+                          (posti)
                         </Text>
                         <Text size="sm" c="dimmed">
                           Quota di riferimento (al momento della drop):{' '}
@@ -296,8 +296,9 @@ export default function MyReservationsPage(): ReactElement {
 
                     {c && r.status === 'active' && bloomed ? (
                       <Stack gap="sm">
-                        <Alert color="teal" variant="light" title="In bloom! La tua drop ha fatto la differenza">
-                          Ora puoi confermare il contributo con pagamento.
+                        <Alert color="teal" variant="light" title="Bloom raggiunto — fase blooming">
+                          La campagna è andata a buon fine; le adesioni sono ora blooming drops. Puoi confermare il
+                          contributo con pagamento.
                         </Alert>
                         <Text size="sm">
                           La tua Drop attualmente ammonta a{' '}

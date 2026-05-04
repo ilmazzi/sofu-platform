@@ -126,6 +126,12 @@ class CampaignController
     ): CampaignResource {
         $request->user()->can('approve', $campaign) || abort(403);
 
+        if ($campaign->sofuFeeWaiverBlocksCampaignApproval()) {
+            throw ValidationException::withMessages([
+                'sofu_fee_waiver' => 'Decidi prima la richiesta di esenzione dalla commissione SoFu, oppure attendi che la valutazione sia completa.',
+            ]);
+        }
+
         return CampaignResource::make($transitionCampaignStatus->execute($campaign, CampaignStatus::Approved, $request->user()));
     }
 
