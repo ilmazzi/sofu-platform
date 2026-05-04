@@ -94,7 +94,7 @@ export default function BackofficeSimulationPage(): ReactElement {
       }
       if (res.status === 404) {
         setError(
-          'Simulazione non disponibile (disattivata in configurazione o ambiente). Verifica SIMULATION_ENABLED / APP_ENV.',
+          'Simulazione non disponibile: in produzione serve SIMULATION_ENABLED=true nel .env usato dal container; con APP_ENV=production e variabile assente è spenta. Se hai appena modificato .env e usi config:cache, nel container esegui php artisan config:clear (poi config:cache se necessario) e riavvia.',
         )
         return
       }
