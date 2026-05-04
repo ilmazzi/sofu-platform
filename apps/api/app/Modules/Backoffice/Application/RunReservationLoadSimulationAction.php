@@ -9,6 +9,7 @@ use App\Modules\Reservations\Application\CancelReservationAction;
 use App\Modules\Reservations\Application\CreateReservationAction;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Throwable;
@@ -108,7 +109,7 @@ final class RunReservationLoadSimulationAction
 
             if ($canReserve) {
                 try {
-                    $user = User::factory()->create(['role' => 'supporter']);
+                    $user = $this->createSimulatedSupporter();
                     $supportersCreated++;
                     $key = 'sim-'.Str::lower((string) Str::ulid());
                     $this->createReservation->execute($campaign->fresh(), $user, $key);
@@ -167,5 +168,20 @@ final class RunReservationLoadSimulationAction
                 'status' => $campaign->status->value,
             ],
         ];
+    }
+
+    /** Nessun Faker: funziona anche con `composer install --no-dev` in produzione. */
+    private function createSimulatedSupporter(): User
+    {
+        $token = Str::lower((string) Str::ulid());
+
+        return User::query()->create([
+            'name' => 'Sim supporter '.$token,
+            'email' => 'sim+'.$token.'@sim.sofu.local',
+            'role' => 'supporter',
+            'password' => Hash::make(Str::random(40)),
+            'email_verified_at' => now(),
+            'remember_token' => Str::random(10),
+        ]);
     }
 }

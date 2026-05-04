@@ -20,9 +20,9 @@ class CampaignFactory extends Factory
      */
     public function definition(): array
     {
-        $title = fake()->sentence(4);
-        $target = fake()->numberBetween(30, 90);
-        $total = fake()->numberBetween(150_000, 450_000);
+        $title = \fake()->sentence(4);
+        $target = \fake()->numberBetween(30, 90);
+        $total = \fake()->numberBetween(150_000, 450_000);
         $fullBloom = $target * 3;
         $min = max(1, (int) round($total / $fullBloom));
         $max = max($min + 1, (int) ceil($total / $target));
@@ -31,10 +31,10 @@ class CampaignFactory extends Factory
             'creator_id' => User::factory(),
             'title' => $title,
             'slug' => Str::slug($title).'-'.Str::lower((string) Str::ulid()),
-            'summary' => fake()->sentence(),
-            'description' => fake()->paragraphs(3, true),
+            'summary' => \fake()->sentence(),
+            'description' => \fake()->paragraphs(3, true),
             'video_url' => 'https://example.com/seed-promo-video',
-            'category' => fake()->randomElement([
+            'category' => \fake()->randomElement([
                 'tech', 'art', 'music', 'education', 'environment', 'health', 'community',
             ]),
             'status' => CampaignStatus::Draft,
