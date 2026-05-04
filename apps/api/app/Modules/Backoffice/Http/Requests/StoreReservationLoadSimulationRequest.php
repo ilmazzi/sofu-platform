@@ -2,13 +2,14 @@
 
 namespace App\Modules\Backoffice\Http\Requests;
 
+use App\Support\SimulationGate;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreReservationLoadSimulationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        if (! config('sofu.simulation_enabled')) {
+        if (! SimulationGate::enabled()) {
             return false;
         }
 
@@ -17,7 +18,7 @@ class StoreReservationLoadSimulationRequest extends FormRequest
 
     protected function failedAuthorization(): void
     {
-        if (! config('sofu.simulation_enabled')) {
+        if (! SimulationGate::enabled()) {
             abort(404);
         }
 

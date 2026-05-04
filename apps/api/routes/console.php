@@ -2,6 +2,7 @@
 
 use App\Modules\Backoffice\Application\RunReservationLoadSimulationAction;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Support\SimulationGate;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
@@ -12,7 +13,7 @@ Artisan::command('inspire', function () {
 Artisan::command(
     'sofu:simulate-reservations {slug : Campaign slug} {--steps=50} {--cancel-probability=0.25} {--allow-bloom : Do not cap reservations below Bloom}',
     function (RunReservationLoadSimulationAction $action): int {
-        if (! config('sofu.simulation_enabled')) {
+        if (! SimulationGate::enabled()) {
             $this->error('Simulazione disattiva (sofu.simulation_enabled / SIMULATION_ENABLED).');
 
             return 1;
