@@ -7,6 +7,7 @@ use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -50,6 +51,10 @@ class CreateCampaignAction
             $days = (int) ($data['duration_days'] ?? 30);
             $days = max(1, min(730, $days));
 
+            $timezone = is_string($creator->timezone ?? null) && $creator->timezone !== ''
+                ? $creator->timezone
+                : (string) config('sofu.default_campaign_timezone', 'Europe/Rome');
+
             $campaign = Campaign::create([
                 'creator_id' => $creator->id,
                 'title' => $data['title'],
@@ -60,6 +65,7 @@ class CreateCampaignAction
                 'category' => $data['category'] ?? null,
                 'status' => CampaignStatus::Draft,
                 'currency' => $data['currency'],
+                'timezone' => $timezone,
                 'is_commercial' => (bool) ($data['is_commercial'] ?? false),
                 'target_supporters' => $data['target_supporters'],
                 'full_bloom_drops' => $data['full_bloom_drops'],
@@ -69,7 +75,8 @@ class CreateCampaignAction
                 'total_amount_cents' => $economics['total_cents'],
                 'published_at' => null,
                 'starts_at' => null,
-                'ends_at' => now()->addDays($days),
+                // End-of-day in creator local timezone, stored in UTC.
+                'ends_at' => CarbonImmutable::now($timezone)->addDays($days)->endOfDay()->utc(),
             ]);
 
             foreach ($data['cost_items'] as $index => $item) {

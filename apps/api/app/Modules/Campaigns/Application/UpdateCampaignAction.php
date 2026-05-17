@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Support\Audit\AuditActions;
 use App\Support\Audit\AuditLogger;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 class UpdateCampaignAction
@@ -44,6 +45,10 @@ class UpdateCampaignAction
             $days = (int) ($data['duration_days'] ?? 30);
             $days = max(1, min(730, $days));
 
+            $timezone = is_string($locked->timezone ?? null) && $locked->timezone !== ''
+                ? $locked->timezone
+                : (string) config('sofu.default_campaign_timezone', 'Europe/Rome');
+
             $locked->forceFill([
                 'title' => $data['title'],
                 'summary' => $data['summary'] ?? null,
@@ -51,13 +56,14 @@ class UpdateCampaignAction
                 'video_url' => $data['video_url'] ?? null,
                 'category' => $data['category'] ?? null,
                 'currency' => $data['currency'],
+                'timezone' => $timezone,
                 'is_commercial' => (bool) ($data['is_commercial'] ?? false),
                 'target_supporters' => $data['target_supporters'],
                 'full_bloom_drops' => $data['full_bloom_drops'],
                 'min_price_cents' => $economics['min_price_cents'],
                 'max_price_cents' => $economics['max_price_cents'],
                 'total_amount_cents' => $economics['total_cents'],
-                'ends_at' => now()->addDays($days),
+                'ends_at' => CarbonImmutable::now($timezone)->addDays($days)->endOfDay()->utc(),
             ]);
 
             if ($locked->active_reservations_count === 0) {

@@ -29,7 +29,9 @@ class RecordCapturedPaymentLedgerEntriesAction
         $payment->loadMissing('reservation.campaign');
 
         $grossAmountCents = $payment->amount_cents;
-        $providerFeeCents = $this->basisPoints($grossAmountCents, self::PROVIDER_FEE_BASIS_POINTS);
+        $providerFeeCents = $payment->provider_fee_cents !== null
+            ? (int) $payment->provider_fee_cents
+            : $this->basisPoints($grossAmountCents, self::PROVIDER_FEE_BASIS_POINTS);
         $campaign = $payment->reservation->campaign;
         $sofuBps = $campaign->appliesSofuPlatformFeeOnPayments() ? self::SOFU_FEE_BASIS_POINTS : 0;
         $sofuFeeCents = $this->basisPoints($grossAmountCents, $sofuBps);

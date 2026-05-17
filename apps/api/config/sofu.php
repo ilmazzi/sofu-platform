@@ -39,4 +39,16 @@ return [
 
     'simulation_max_iterations' => max(1, min(10_000, (int) env('SIMULATION_MAX_ITERATIONS', 500))),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Campaign timezone (deadlines)
+    |--------------------------------------------------------------------------
+    |
+    | Deadlines are computed at the creator's local midnight (end of day),
+    | but stored in UTC. Until the product collects per-user timezones, we
+    | default to a single IANA timezone.
+    |
+    */
+    'default_campaign_timezone' => (string) env('SOFU_DEFAULT_CAMPAIGN_TIMEZONE', 'Europe/Rome'),
+
 ];

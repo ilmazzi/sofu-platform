@@ -47,9 +47,16 @@ class FundingCaptureBatchTest extends TestCase
         $campaign->refresh();
         $this->assertSame(CampaignStatus::Successful, $campaign->status);
 
-        $this->assertSame(2, Payment::query()->where('status', PaymentStatus::RequiresConfirmation)->count());
-        foreach (Payment::query()->where('status', PaymentStatus::RequiresConfirmation)->get() as $payment) {
-            $this->assertSame($capturePriceCents, $payment->amount_cents);
+        // In prod, the capture batch freezes the final price on reservations.
+        // PaymentIntents are created on-demand when supporters actually pay, after closure.
+        $this->assertSame(0, Payment::query()->where('status', PaymentStatus::RequiresConfirmation)->count());
+
+        $reservations = \App\Modules\Reservations\Infrastructure\Eloquent\Reservation::query()
+            ->where('campaign_id', $campaign->id)
+            ->get();
+        $this->assertCount(2, $reservations);
+        foreach ($reservations as $reservation) {
+            $this->assertSame($capturePriceCents, $reservation->effective_price_cents);
         }
     }
 
@@ -81,10 +88,11 @@ class FundingCaptureBatchTest extends TestCase
         $result = app(ProcessFundingCaptureBatchAction::class)->execute($campaign->fresh());
 
         $this->assertSame(1, $result['reservations_processed']);
-        $this->assertSame(1, $result['intents_created']);
+        $this->assertSame(0, $result['intents_created']);
 
-        $payment = Payment::query()->firstOrFail();
-        $this->assertSame(3_300, $payment->amount_cents);
-        $this->assertSame(3_300, $payment->reservation->effective_price_cents);
+        $this->assertSame(0, Payment::query()->count());
+
+        $reservation = \App\Modules\Reservations\Infrastructure\Eloquent\Reservation::query()->firstOrFail();
+        $this->assertSame(3_300, $reservation->effective_price_cents);
     }
 }

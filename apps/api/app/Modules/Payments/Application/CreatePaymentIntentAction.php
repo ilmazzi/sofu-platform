@@ -5,6 +5,7 @@ namespace App\Modules\Payments\Application;
 use App\Modules\Payments\Domain\Contracts\PaymentProvider;
 use App\Modules\Payments\Domain\Enums\PaymentStatus;
 use App\Modules\Payments\Infrastructure\Eloquent\Payment;
+use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use App\Support\Audit\AuditActions;
@@ -19,9 +20,12 @@ class CreatePaymentIntentAction
         private readonly AuditLogger $audit,
     ) {}
 
-    public function execute(Reservation $reservation): Payment
+    /**
+     * @return array{payment: Payment, created: bool}
+     */
+    public function execute(Reservation $reservation): array
     {
-        return DB::transaction(function () use ($reservation): Payment {
+        return DB::transaction(function () use ($reservation): array {
             $reservation->loadMissing('campaign');
             $campaign = $reservation->campaign;
 
@@ -37,6 +41,12 @@ class CreatePaymentIntentAction
                 ], 422));
             }
 
+            if ($campaign->status !== CampaignStatus::Successful) {
+                throw new HttpResponseException(response()->json([
+                    'message' => 'Il pagamento e\' disponibile solo al termine della campagna, se la campagna e\' andata a buon fine.',
+                ], 422));
+            }
+
             $existingPayment = Payment::query()
                 ->where('reservation_id', $reservation->id)
                 ->where('status', PaymentStatus::RequiresConfirmation)
@@ -44,7 +54,7 @@ class CreatePaymentIntentAction
                 ->first();
 
             if ($existingPayment !== null) {
-                return $existingPayment;
+                return ['payment' => $existingPayment, 'created' => false];
             }
 
             $intent = $this->provider->createIntent($reservation);
@@ -66,7 +76,7 @@ class CreatePaymentIntentAction
                 'currency' => $payment->currency,
             ]);
 
-            return $payment;
+            return ['payment' => $payment, 'created' => true];
         });
     }
 }

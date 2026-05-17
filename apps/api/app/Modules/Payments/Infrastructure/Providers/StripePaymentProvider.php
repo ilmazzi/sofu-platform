@@ -7,6 +7,7 @@ use App\Modules\Payments\Domain\PaymentIntentData;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use RuntimeException;
 use Stripe\StripeClient;
+use Illuminate\Support\Str;
 
 class StripePaymentProvider implements PaymentProvider
 {
@@ -19,15 +20,19 @@ class StripePaymentProvider implements PaymentProvider
 
         $reservation->loadMissing('campaign');
         $currency = strtolower($reservation->campaign->currency);
+        $amountCents = $reservation->paymentAmountCents();
 
         $stripe = new StripeClient($secret);
         $intent = $stripe->paymentIntents->create([
-            'amount' => $reservation->paymentAmountCents(),
+            'amount' => $amountCents,
             'currency' => $currency,
             'metadata' => [
                 'reservation_id' => (string) $reservation->id,
             ],
             'automatic_payment_methods' => ['enabled' => true],
+        ], [
+            // Prevent duplicate intents on retries / double-clicks.
+            'idempotency_key' => 'sofu_pi_reservation_'.(string) $reservation->id.'_'.Str::lower((string) $amountCents),
         ]);
 
         $clientSecret = $intent->client_secret;

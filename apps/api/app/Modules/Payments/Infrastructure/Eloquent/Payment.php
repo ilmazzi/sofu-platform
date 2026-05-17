@@ -15,8 +15,12 @@ class Payment extends Model
         'reservation_id',
         'provider',
         'provider_payment_id',
+        'provider_charge_id',
+        'provider_balance_transaction_id',
         'status',
         'amount_cents',
+        'provider_fee_cents',
+        'provider_fee_currency',
         'currency',
         'client_secret',
         'failure_reason',
@@ -29,6 +33,7 @@ class Payment extends Model
         return [
             'status' => PaymentStatus::class,
             'amount_cents' => 'integer',
+            'provider_fee_cents' => 'integer',
             'authorized_at' => 'datetime',
             'captured_at' => 'datetime',
         ];

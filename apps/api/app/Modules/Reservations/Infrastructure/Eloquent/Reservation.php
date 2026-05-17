@@ -45,6 +45,12 @@ class Reservation extends Model
     {
         $this->loadMissing('campaign');
 
+        // After funding closes successfully, the reservation effective price is recalculated to the
+        // final "bloom drop" value at closure. Use it as the source of truth for charging.
+        if ($this->effective_price_cents !== null) {
+            return (int) $this->effective_price_cents;
+        }
+
         return $this->campaign->current_price_cents * $this->dropCount();
     }
 

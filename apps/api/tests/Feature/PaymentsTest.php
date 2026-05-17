@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
+use App\Modules\Payments\Application\ProcessFundingCaptureBatchAction;
 use App\Modules\Payments\Domain\Enums\PaymentStatus;
 use App\Modules\Payments\Infrastructure\Eloquent\Payment;
 use App\Modules\Reservations\Domain\Enums\ReservationStatus;
@@ -63,8 +65,20 @@ class PaymentsTest extends TestCase
         $this
             ->actingAs($supporter)
             ->postJson("/api/v1/reservations/{$reservation->id}/payment-intent")
+            ->assertStatus(422);
+    }
+
+    public function test_payment_intent_rejected_until_campaign_is_closed_successful(): void
+    {
+        [$supporter, $reservation] = $this->createReservation(closeCampaign: false);
+
+        $this
+            ->actingAs($supporter)
+            ->postJson("/api/v1/reservations/{$reservation->id}/payment-intent")
             ->assertStatus(422)
-            ->assertJsonFragment(['message' => 'Il pagamento si abilita al Bloom: quando la campagna raggiunge l’obiettivo sostenitori.']);
+            ->assertJsonFragment([
+                'message' => 'Il pagamento e\' disponibile solo al termine della campagna, se la campagna e\' andata a buon fine.',
+            ]);
     }
 
     public function test_supporter_cannot_create_payment_intent_for_another_supporters_reservation(): void
@@ -253,7 +267,7 @@ class PaymentsTest extends TestCase
     /**
      * @return array{0: User, 1: Reservation}
      */
-    private function createReservation(): array
+    private function createReservation(bool $closeCampaign = true): array
     {
         $supporter = User::factory()->create();
         $campaign = Campaign::factory()->published()->create([
@@ -273,9 +287,19 @@ class PaymentsTest extends TestCase
         $campaign->refresh();
         $this->reserveUntilBloom($campaign);
 
+        if ($closeCampaign) {
+            $campaign->refresh();
+            $campaign->forceFill([
+                'status' => CampaignStatus::Successful,
+                'ends_at' => now()->subMinute(),
+            ])->save();
+
+            app(ProcessFundingCaptureBatchAction::class)->execute($campaign->fresh());
+        }
+
         return [
             $supporter,
-            Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail(),
+            Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail()->fresh(),
         ];
     }
 

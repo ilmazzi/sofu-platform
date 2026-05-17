@@ -6,6 +6,7 @@ use App\Modules\Payments\Application\CreatePaymentIntentAction;
 use App\Modules\Payments\Http\Requests\StorePaymentIntentRequest;
 use App\Modules\Payments\Http\Resources\PaymentResource;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
+use Illuminate\Http\JsonResponse;
 
 class PaymentIntentController
 {
@@ -13,9 +14,11 @@ class PaymentIntentController
         StorePaymentIntentRequest $request,
         Reservation $reservation,
         CreatePaymentIntentAction $createPaymentIntent,
-    ): PaymentResource {
-        $payment = $createPaymentIntent->execute($reservation->load('campaign', 'supporter'));
+    ): JsonResponse {
+        $result = $createPaymentIntent->execute($reservation->load('campaign', 'supporter'));
 
-        return PaymentResource::make($payment);
+        return PaymentResource::make($result['payment'])
+            ->response()
+            ->setStatusCode($result['created'] ? 201 : 200);
     }
 }

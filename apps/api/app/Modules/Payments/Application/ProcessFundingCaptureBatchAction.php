@@ -19,10 +19,6 @@ use Illuminate\Support\Facades\Log;
  */
 final class ProcessFundingCaptureBatchAction
 {
-    public function __construct(
-        private readonly CreatePaymentIntentAction $createPaymentIntent,
-    ) {}
-
     /**
      * @return array{reservations_processed: int, intents_created: int, intents_amount_updated: int}
      */
@@ -43,14 +39,11 @@ final class ProcessFundingCaptureBatchAction
             ->orderBy('id');
 
         foreach ($reservationQuery->cursor() as $reservation) {
-            $shouldCreateIntent = false;
-
             DB::transaction(function () use (
                 $reservation,
                 $capturePriceCents,
                 &$intentsAmountUpdated,
                 &$processed,
-                &$shouldCreateIntent,
             ): void {
                 $locked = Reservation::query()
                     ->whereKey($reservation->id)
@@ -83,17 +76,7 @@ final class ProcessFundingCaptureBatchAction
                     return;
                 }
 
-                $shouldCreateIntent = true;
             });
-
-            if ($shouldCreateIntent) {
-                $fresh = Reservation::query()
-                    ->with('campaign')
-                    ->findOrFail($reservation->id);
-
-                $this->createPaymentIntent->execute($fresh);
-                $intentsCreated++;
-            }
         }
 
         Log::info('funding_capture_batch_completed', [

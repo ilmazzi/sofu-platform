@@ -11,6 +11,7 @@ use App\Modules\Payments\Infrastructure\Eloquent\Payment;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
 use App\Support\Audit\AuditActions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class LedgerTest extends TestCase
@@ -189,6 +190,12 @@ class LedgerTest extends TestCase
 
         $campaign->refresh();
         $this->reserveUntilBloom($campaign);
+
+        // Close the campaign (successful) and freeze final capture prices on reservations.
+        $campaign->forceFill([
+            'ends_at' => Carbon::now()->subSecond(),
+        ])->save();
+        app(\App\Modules\Campaigns\Application\ProcessCampaignFundingClosuresAction::class)->execute(now());
 
         $this
             ->actingAs($supporter)

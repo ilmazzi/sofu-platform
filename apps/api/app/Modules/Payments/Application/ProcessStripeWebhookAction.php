@@ -12,6 +12,7 @@ use JsonException;
 use Stripe\Event;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Exception\UnexpectedValueException;
+use Stripe\StripeClient;
 use Stripe\Webhook;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -39,7 +40,10 @@ class ProcessStripeWebhookAction
             throw new BadRequestHttpException('Invalid Stripe webhook payload or signature.');
         }
 
-        return DB::transaction(function () use ($event, $payload): array {
+        $apiSecret = config('payments.stripe.secret');
+        $stripe = is_string($apiSecret) && $apiSecret !== '' ? new StripeClient($apiSecret) : null;
+
+        return DB::transaction(function () use ($event, $payload, $stripe): array {
             $existingEvent = PaymentProviderEvent::query()
                 ->where('provider', 'stripe')
                 ->where('provider_event_id', $event->id)
@@ -88,6 +92,9 @@ class ProcessStripeWebhookAction
             ]);
 
             if ($event->type === 'payment_intent.succeeded') {
+                if ($stripe !== null) {
+                    $this->hydrateStripeFeeFields($payment, $stripe);
+                }
                 $this->applyTransitions->markCaptured($payment);
             } else {
                 $object = $event->data->object;
@@ -111,6 +118,39 @@ class ProcessStripeWebhookAction
                 'created' => true,
             ];
         });
+    }
+
+    private function hydrateStripeFeeFields(Payment $payment, StripeClient $stripe): void
+    {
+        // Retrieve full PaymentIntent details to get charge + balance transaction fee.
+        $pi = $stripe->paymentIntents->retrieve($payment->provider_payment_id, [
+            'expand' => ['latest_charge.balance_transaction'],
+        ]);
+
+        // Basic safety: if Stripe says a different amount, log it into our row but do not change the charge amount.
+        if (isset($pi->amount) && is_int($pi->amount) && $payment->amount_cents !== (int) $pi->amount) {
+            $payment->forceFill(['amount_cents' => (int) $pi->amount])->save();
+        }
+
+        $charge = $pi->latest_charge ?? null;
+        if (is_string($charge) || $charge === null) {
+            return;
+        }
+
+        $bt = $charge->balance_transaction ?? null;
+        if (is_string($bt) || $bt === null) {
+            return;
+        }
+
+        $fee = $bt->fee ?? null;
+        $feeCurrency = $bt->currency ?? null;
+
+        $payment->forceFill([
+            'provider_charge_id' => is_string($charge->id ?? null) ? (string) $charge->id : null,
+            'provider_balance_transaction_id' => is_string($bt->id ?? null) ? (string) $bt->id : null,
+            'provider_fee_cents' => is_int($fee) ? $fee : null,
+            'provider_fee_currency' => is_string($feeCurrency) ? strtoupper($feeCurrency) : null,
+        ])->save();
     }
 
     private function findPaymentForStripeEvent(Event $event): ?Payment
