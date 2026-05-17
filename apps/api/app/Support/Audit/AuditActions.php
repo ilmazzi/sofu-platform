@@ -61,6 +61,8 @@ final class AuditActions
 
     public const RESERVATION_CANCELLED = 'reservation.cancelled';
 
+    public const RESERVATION_DROPS_ADDED = 'reservation.drops_added';
+
     public const PAYMENT_INTENT_CREATED = 'payment.intent_created';
 
     public const PAYMENT_AUTHORIZED = 'payment.authorized';

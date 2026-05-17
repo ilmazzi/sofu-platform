@@ -17,6 +17,7 @@ import {
 } from '@mantine/core'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
+import { MockPaymentDevPanel } from '../components/MockPaymentDevPanel'
 import { StripePaymentForm } from '../components/StripePaymentForm'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api/client'
@@ -308,8 +309,8 @@ export default function MyReservationsPage(): ReactElement {
                     {c && r.status === 'active' && bloomed ? (
                       <Stack gap="sm">
                         <Alert color="teal" variant="light" title="Bloom raggiunto — fase blooming">
-                          La campagna è andata a buon fine. Puoi confermare il contributo sull’importo indicato dal
-                          sistema in quel momento.
+                          La campagna è andata a buon fine. Autorizza il pagamento con la carta sull’importo indicato
+                          dal sistema in quel momento.
                         </Alert>
                         <Text size="sm">
                           {reservationDropCount(r) > 1 ? (
@@ -330,7 +331,7 @@ export default function MyReservationsPage(): ReactElement {
                     {c && r.status === 'failed' && bloomed ? (
                       <Stack gap="sm">
                         <Alert color="red" variant="light">
-                          Il pagamento non è andato a buon fine. Riprova con «Conferma il contributo».
+                          Il pagamento non è andato a buon fine. Riprova con «Paga» qui sotto.
                         </Alert>
                         <Text size="sm">
                           {LABEL_BLOOMING_DROP_CURRENT}:{' '}
@@ -353,8 +354,8 @@ export default function MyReservationsPage(): ReactElement {
                             ? ` (${reservationDropCount(r)} Blooming drop al prezzo attuale).`
                             : ' (1 Blooming drop).'}
                         </Text>
-                        <Button type="button" onClick={() => void startPayment(r.id)} loading={pay === 'pending'}>
-                          Conferma il contributo
+                        <Button type="button" onClick={() => void startPayment(r.id)} loading={pay === 'pending'} color="teal">
+                          Paga {formatEuro(reservationPaymentAmountCents(c, r), c.currency)}
                         </Button>
                         {pay === 'error' ? (
                           <Text size="sm" c="red">
@@ -364,12 +365,19 @@ export default function MyReservationsPage(): ReactElement {
                         {pay && pay !== 'pending' && pay !== 'error' ? (
                           <Stack gap="sm">
                             {pay.provider === 'mock' ? (
-                              <Alert color="teal" variant="light">
-                                <Text size="sm">
-                                  Conferma registrata per {formatEuro(pay.amount_cents, pay.currency)}. In anteprima non
-                                  serve la carta: l’addebito seguirà le regole della campagna.
-                                </Text>
-                              </Alert>
+                              <MockPaymentDevPanel
+                                payment={pay}
+                                onCompleted={() => {
+                                  setPaymentById((m) => {
+                                    const next = { ...m }
+                                    delete next[r.id]
+                                    return next
+                                  })
+                                  setReloadKey((k) => k + 1)
+                                  window.setTimeout(() => setReloadKey((k) => k + 1), 1200)
+                                  navigate('/me/reservations?payment=success', { replace: true })
+                                }}
+                              />
                             ) : (
                               <>
                                 <Text size="sm" c="dimmed">

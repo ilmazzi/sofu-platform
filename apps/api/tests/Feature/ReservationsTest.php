@@ -81,6 +81,38 @@ class ReservationsTest extends TestCase
         ]);
     }
 
+    public function test_supporter_can_add_drops_to_existing_reservation_before_bloom(): void
+    {
+        $campaign = Campaign::factory()->published()->create([
+            'total_amount_cents' => 8000,
+            'min_price_cents' => 1000,
+            'max_price_cents' => 5000,
+            'current_price_cents' => 5000,
+            'active_reservations_count' => 0,
+        ]);
+        $supporter = User::factory()->create();
+
+        $this
+            ->actingAs($supporter)
+            ->withHeader('Idempotency-Key', 'base-drops')
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations", ['drop_count' => 2])
+            ->assertCreated()
+            ->assertJsonPath('data.drop_count', 2);
+
+        $reservationId = (int) $this->actingAs($supporter)->getJson('/api/v1/me/reservations')->json('data.0.id');
+
+        $this
+            ->actingAs($supporter)
+            ->postJson("/api/v1/reservations/{$reservationId}/drops", ['additional_drop_count' => 3])
+            ->assertOk()
+            ->assertJsonPath('data.drop_count', 5);
+
+        $this->assertDatabaseHas('campaigns', [
+            'id' => $campaign->id,
+            'active_reservations_count' => 5,
+        ]);
+    }
+
     public function test_second_supporter_lowers_current_campaign_price(): void
     {
         $campaign = Campaign::factory()->published()->create([

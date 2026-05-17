@@ -22,6 +22,7 @@ import type { components } from '@sofu/contracts'
 import { CampaignCoverImage } from '../components/CampaignCoverImage'
 import { CampaignGrowthPlant } from '../components/CampaignGrowthPlant'
 import { CampaignMetricsBlock } from '../components/CampaignMetricsBlock'
+import { MockPaymentDevPanel } from '../components/MockPaymentDevPanel'
 import { StripePaymentForm } from '../components/StripePaymentForm'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch, apiFetchForm } from '../lib/api/client'
@@ -81,6 +82,10 @@ export default function CampaignDetailPage(): ReactElement {
   const [draftGalleryMsg, setDraftGalleryMsg] = useState<string | null>(null)
   const [cancelPending, setCancelPending] = useState(false)
   const [cancelMsg, setCancelMsg] = useState<string | null>(null)
+  const [addDropsPanelOpen, setAddDropsPanelOpen] = useState(false)
+  const [additionalDropCount, setAdditionalDropCount] = useState<number | string>(1)
+  const [addDropsPending, setAddDropsPending] = useState(false)
+  const [addDropsMsg, setAddDropsMsg] = useState<string | null>(null)
   const [deletePending, setDeletePending] = useState(false)
   const [waiverRejectNote, setWaiverRejectNote] = useState('')
 
@@ -421,11 +426,48 @@ export default function CampaignDetailPage(): ReactElement {
       }
       setLastReservation(null)
       setReserveMsg(null)
+      setAddDropsPanelOpen(false)
+      setPledgePanelOpen(false)
       setReloadTick((t) => t + 1)
     } catch {
       setCancelMsg('Errore di rete.')
     } finally {
       setCancelPending(false)
+    }
+  }
+
+  async function onAddDrops(e: FormEvent): Promise<void> {
+    e.preventDefault()
+    const resv = effectiveReservation
+    if (!resv || resv.status !== 'active' || !canReserve) return
+    const extra = Math.max(1, Math.min(10_000, Math.floor(Number(additionalDropCount) || 1)))
+    setAddDropsMsg(null)
+    setAddDropsPending(true)
+    try {
+      const res = await apiFetch(`/api/v1/reservations/${resv.id}/drops`, {
+        method: 'POST',
+        json: { additional_drop_count: extra },
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        const msg =
+          body && typeof body === 'object' && 'message' in body
+            ? String((body as { message: string }).message)
+            : `Operazione non riuscita (${res.status}).`
+        setAddDropsMsg(msg)
+        return
+      }
+      const json = body as ReservationWrapped
+      setLastReservation(json.data)
+      setAddDropsPanelOpen(false)
+      setAddDropsMsg(
+        `Aggiunte ${extra} drop al tuo impegno. Totale: ${formatEuro(json.data.effective_price_cents, campaign?.currency ?? 'EUR')} (${json.data.drop_count} drop).`,
+      )
+      setReloadTick((t) => t + 1)
+    } catch {
+      setAddDropsMsg('Errore di rete.')
+    } finally {
+      setAddDropsPending(false)
     }
   }
 
@@ -514,6 +556,7 @@ export default function CampaignDetailPage(): ReactElement {
     canReserve &&
     (effectiveReservation === null || !reservationBlocksNewDroplet(effectiveReservation.status))
   const canWithdrawDroplet = effectiveReservation?.status === 'active' && !bloomed
+  const canAddMoreDrops = effectiveReservation?.status === 'active' && canReserve
   const canPayDroplet =
     effectiveReservation !== null &&
     reservationEligibleForPayment(effectiveReservation.status, bloomed)
@@ -811,7 +854,9 @@ export default function CampaignDetailPage(): ReactElement {
                                     Quante drop prometti di versare?
                                   </Text>
                                   <Text size="xs" c="dimmed" mt={4} lh={1.5}>
-                                    Se credi in questa campagna, offri di versare più quote.
+                                    Se credi in questa campagna, offri di versare più quote. Qui prometti solo
+                                    l’impegno: nessun addebito. La carta si userà dopo il Bloom, quando la campagna ha
+                                    vinto (oppure in un passo dedicato al primo impegno, quando sarà attivo).
                                   </Text>
                                 </div>
                                 <NumberInput
@@ -870,14 +915,104 @@ export default function CampaignDetailPage(): ReactElement {
                     {effectiveReservation ? (
                       <Box pt="sm" style={{ borderTop: '1px solid #dee2e6' }}>
                         <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="sm">
-                          Il tuo droplet
+                          Il tuo impegno
                         </Text>
-                        <Text size="xs" c="dimmed" mb="sm">
-                          #{effectiveReservation.id}
-                          {(effectiveReservation.drop_count ?? 1) > 1
-                            ? ` · ${effectiveReservation.drop_count} drop promesse`
-                            : null}
+                        <Text size="sm" fw={600} mb={4}>
+                          {reservationDrops === 1 ? '1 drop promessa' : `${reservationDrops} drop promesse`}
                         </Text>
+                        <Text size="xs" c="dimmed" mb="md">
+                          Riferimento #{effectiveReservation.id}
+                          {!bloomed
+                            ? ` · impegno totale ${formatEuro(effectiveReservation.effective_price_cents, campaign.currency)} (nessun addebito finché non si paga dopo il Bloom)`
+                            : ` · da pagare ora ${formatEuro(reservationPayCents, campaign.currency)}`}
+                        </Text>
+
+                        {effectiveReservation.status === 'active' && (canAddMoreDrops || canWithdrawDroplet) ? (
+                          <Group gap="xs" mb="md" grow>
+                            {canAddMoreDrops ? (
+                              <Button
+                                type="button"
+                                variant="light"
+                                color="teal"
+                                size="sm"
+                                onClick={() => {
+                                  setAddDropsPanelOpen((o) => !o)
+                                  setAddDropsMsg(null)
+                                }}
+                              >
+                                Aggiungi drop
+                              </Button>
+                            ) : null}
+                            {canWithdrawDroplet ? (
+                              <Button
+                                type="button"
+                                variant="light"
+                                color="gray"
+                                size="sm"
+                                loading={cancelPending}
+                                onClick={() => void onCancelReservation()}
+                              >
+                                Ritira tutto l’impegno
+                              </Button>
+                            ) : null}
+                          </Group>
+                        ) : null}
+
+                        {addDropsPanelOpen && canAddMoreDrops ? (
+                          <form onSubmit={(e) => void onAddDrops(e)} style={{ marginBottom: '1rem' }}>
+                            <Stack
+                              gap="sm"
+                              p="md"
+                              style={{ border: '1px solid #dee2e6', backgroundColor: '#f8f9fa' }}
+                            >
+                              <Text size="sm" fw={600}>
+                                Quante drop in più vuoi promettere?
+                              </Text>
+                              <NumberInput
+                                label="Drop aggiuntive"
+                                min={1}
+                                max={10_000}
+                                allowDecimal={false}
+                                value={additionalDropCount}
+                                onChange={setAdditionalDropCount}
+                                size="sm"
+                              />
+                              <Group gap="xs" grow>
+                                <Button
+                                  type="button"
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => setAddDropsPanelOpen(false)}
+                                  disabled={addDropsPending}
+                                >
+                                  Annulla
+                                </Button>
+                                <Button type="submit" size="sm" color="teal" loading={addDropsPending}>
+                                  Aggiungi al mio impegno
+                                </Button>
+                              </Group>
+                            </Stack>
+                          </form>
+                        ) : null}
+
+                        {addDropsMsg ? (
+                          <Alert color="teal" variant="light" p="sm" mb="md">
+                            <Text size="xs">{addDropsMsg}</Text>
+                          </Alert>
+                        ) : null}
+
+                        {cancelMsg ? (
+                          <Alert color="red" variant="light" p="sm" mb="md">
+                            <Text size="xs">{cancelMsg}</Text>
+                          </Alert>
+                        ) : null}
+
+                        {effectiveReservation.status === 'active' && bloomed && !canWithdrawDroplet ? (
+                          <Text size="xs" c="dimmed" mb="md" lh={1.5}>
+                            Dopo il Bloom non puoi ritirare l’impegno: la campagna è andata a buon fine. Puoi ancora
+                            aggiungere drop per sostenere di più.
+                          </Text>
+                        ) : null}
                         {effectiveReservation.status === 'converted_to_payment' ? (
                           <Alert color="teal" variant="light" p="sm" title="In bloom!">
                             <Text size="xs">Pagamento completato — la tua drop ha fatto la differenza.</Text>
@@ -914,26 +1049,6 @@ export default function CampaignDetailPage(): ReactElement {
                                 {formatEuro(effectiveReservation.effective_price_cents, campaign.currency)}
                               </Text>
                             </Text>
-                            {canWithdrawDroplet ? (
-                              <Stack gap="xs" mt="xs">
-                                <Button
-                                  type="button"
-                                  variant="subtle"
-                                  color="gray"
-                                  size="xs"
-                                  loading={cancelPending}
-                                  onClick={() => void onCancelReservation()}
-                                  style={{ alignSelf: 'flex-start' }}
-                                >
-                                  Ritira la drop
-                                </Button>
-                                {cancelMsg ? (
-                                  <Alert color="red" variant="light" p="sm">
-                                    <Text size="xs">{cancelMsg}</Text>
-                                  </Alert>
-                                ) : null}
-                              </Stack>
-                            ) : null}
                           </Stack>
                         ) : null}
 
@@ -999,33 +1114,40 @@ export default function CampaignDetailPage(): ReactElement {
                         effectiveReservation.status !== 'converted_to_payment' &&
                         effectiveReservation.status !== 'cancelled' &&
                         effectiveReservation.status !== 'expired' ? (
-                          <Stack gap="sm" mt="sm">
+                          <Stack
+                            gap="sm"
+                            mt="md"
+                            pt="md"
+                            style={{ borderTop: '1px solid #dee2e6' }}
+                          >
+                            <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }}>
+                              Pagamento
+                            </Text>
+                            <Text size="sm" lh={1.55}>
+                              La campagna ha raggiunto l’obiettivo. Qui{' '}
+                              <Text span fw={600}>autorizzi l’addebito</Text> sul tuo metodo di pagamento: non è
+                              solo una conferma simbolica, è il passo per pagare le{' '}
+                              {reservationDrops === 1 ? 'drop promessa' : `${reservationDrops} drop promesse`}.
+                            </Text>
                             <Text size="xs" c="dimmed" lh={1.5}>
-                              Confermi il contributo per{' '}
-                              <Text span fw={600}>
+                              Importo attuale:{' '}
+                              <Text span fw={700}>
                                 {formatEuro(reservationPayCents, campaign.currency)}
                               </Text>
                               {reservationDrops > 1
-                                ? ` (${reservationDrops} Blooming drop al prezzo di campagna attuale).`
-                                : ' (1 Blooming drop al prezzo di campagna attuale).'}
-                              {' '}L’importo può ancora variare fino alla chiusura della campagna.
+                                ? ` (${reservationDrops} × ${formatEuro(campaign.current_price_cents, campaign.currency)} al prezzo di campagna di oggi).`
+                                : null}
+                              {' '}Può ancora variare leggermente fino alla chiusura della campagna.
                             </Text>
                             <Button
                               type="button"
                               onClick={() => void onPaymentIntent()}
                               loading={payment === 'pending'}
-                              variant="outline"
-                              color="dark"
-                              size="sm"
+                              color="teal"
+                              size="md"
                               fullWidth
-                              style={{
-                                fontWeight: 600,
-                                letterSpacing: '0.02em',
-                                textTransform: 'uppercase',
-                                fontSize: '0.65rem',
-                              }}
                             >
-                              Conferma il contributo
+                              Paga {formatEuro(reservationPayCents, campaign.currency)}
                             </Button>
                             {paymentMsg ? (
                               <Alert
@@ -1045,16 +1167,17 @@ export default function CampaignDetailPage(): ReactElement {
                             {payment && payment !== 'pending' ? (
                               <Stack gap="sm">
                                 {payment.provider === 'mock' ? (
-                                  <Alert color="teal" variant="light" p="sm">
-                                    <Text size="xs">
-                                      Conferma registrata per{' '}
-                                      <Text span fw={700}>
-                                        {formatEuro(payment.amount_cents, payment.currency)}
-                                      </Text>
-                                      . In questa anteprima non serve inserire la carta: l’addebito seguirà le regole
-                                      della campagna quando previsto.
-                                    </Text>
-                                  </Alert>
+                                  <MockPaymentDevPanel
+                                    payment={payment}
+                                    onCompleted={() => {
+                                      setPaymentMsg('Pagamento completato.')
+                                      setReloadTick((t) => t + 1)
+                                      window.setTimeout(() => setReloadTick((t) => t + 1), 1200)
+                                      navigate(`/campaigns/${encodeURIComponent(campaign.slug)}?payment=success`, {
+                                        replace: true,
+                                      })
+                                    }}
+                                  />
                                 ) : (
                                   <>
                                     <Text size="xs" c="dimmed">

@@ -4,8 +4,10 @@ namespace App\Modules\Reservations\Http\Controllers;
 
 use App\Modules\Campaigns\Infrastructure\Eloquent\Campaign;
 use App\Modules\Notifications\Infrastructure\Notifications\ReservationCancelledNotification;
+use App\Modules\Reservations\Application\AddReservationDropsAction;
 use App\Modules\Reservations\Application\CancelReservationAction;
 use App\Modules\Reservations\Application\CreateReservationAction;
+use App\Modules\Reservations\Http\Requests\AddReservationDropsRequest;
 use App\Modules\Reservations\Http\Requests\StoreReservationRequest;
 use App\Modules\Reservations\Http\Resources\ReservationResource;
 use App\Modules\Reservations\Infrastructure\Eloquent\Reservation;
@@ -42,6 +44,20 @@ class ReservationController
             ->paginate(20);
 
         return ReservationResource::collection($reservations);
+    }
+
+    public function addDrops(
+        AddReservationDropsRequest $request,
+        Reservation $reservation,
+        AddReservationDropsAction $addReservationDrops,
+    ): JsonResponse {
+        if ($request->user()->id !== $reservation->supporter_id) {
+            throw new AuthorizationException('You cannot modify this reservation.');
+        }
+
+        $updated = $addReservationDrops->execute($reservation, $request->user(), $request->additionalDropCount());
+
+        return ReservationResource::make($updated)->response();
     }
 
     public function destroy(
