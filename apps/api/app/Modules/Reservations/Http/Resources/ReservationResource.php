@@ -31,6 +31,7 @@ class ReservationResource extends JsonResource
                 'target_supporters' => $this->campaign->target_supporters,
                 'current_price_cents' => $this->campaign->current_price_cents,
                 'active_reservations_count' => $this->campaign->active_reservations_count,
+                'currency' => $this->campaign->currency,
             ]),
             'price_snapshot' => $this->whenLoaded('priceSnapshot', fn () => [
                 'id' => (string) $this->priceSnapshot->id,

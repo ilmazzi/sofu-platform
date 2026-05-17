@@ -1390,6 +1390,7 @@ components:
         - target_supporters
         - current_price_cents
         - active_reservations_count
+        - currency
       properties:
         id:
           type: string
@@ -1408,6 +1409,10 @@ components:
           type: integer
         active_reservations_count:
           type: integer
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
 
     PriceSnapshotEmbed:
       type: object

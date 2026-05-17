@@ -1714,6 +1714,7 @@ export interface components {
             target_supporters: number;
             current_price_cents: number;
             active_reservations_count: number;
+            currency: string;
         };
         PriceSnapshotEmbed: {
             id: string;

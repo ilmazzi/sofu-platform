@@ -320,7 +320,7 @@ export default function MyReservationsPage(): ReactElement {
                           ) : null}
                           {LABEL_BLOOMING_DROP_CURRENT}:{' '}
                           <Text span fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency ?? 'EUR')}
+                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency)}
                           </Text>
                           .
                         </Text>
@@ -335,7 +335,7 @@ export default function MyReservationsPage(): ReactElement {
                         <Text size="sm">
                           {LABEL_BLOOMING_DROP_CURRENT}:{' '}
                           <Text span fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency ?? 'EUR')}
+                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency)}
                           </Text>
                           .
                         </Text>
@@ -347,7 +347,7 @@ export default function MyReservationsPage(): ReactElement {
                         <Text size="xs" c="dimmed">
                           Confermi{' '}
                           <Text span fw={600}>
-                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency ?? 'EUR')}
+                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency)}
                           </Text>
                           {reservationDropCount(r) > 1
                             ? ` (${reservationDropCount(r)} Blooming drop al prezzo attuale).`
