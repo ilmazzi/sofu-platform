@@ -23,9 +23,12 @@ import { apiFetch } from '../lib/api/client'
 import {
   campaignBloomProgressPercent,
   campaignHasReachedBloom,
+  reservationDropCount,
   reservationEligibleForPayment,
+  reservationPaymentAmountCents,
 } from '../lib/bloom'
 import { formatEuro } from '../lib/campaignMetrics'
+import { LABEL_BLOOMING_DROP_CURRENT } from '../lib/dropMechanics'
 import { reservationStatusLabel } from '../lib/reservationLabels'
 
 type Reservation = components['schemas']['Reservation']
@@ -305,13 +308,19 @@ export default function MyReservationsPage(): ReactElement {
                     {c && r.status === 'active' && bloomed ? (
                       <Stack gap="sm">
                         <Alert color="teal" variant="light" title="Bloom raggiunto — fase blooming">
-                          La campagna è andata a buon fine; le adesioni sono ora blooming drops. Puoi confermare il
-                          contributo con pagamento.
+                          La campagna è andata a buon fine. Puoi confermare il contributo sull’importo indicato dal
+                          sistema in quel momento.
                         </Alert>
                         <Text size="sm">
-                          La tua Drop attualmente ammonta a{' '}
+                          {reservationDropCount(r) > 1 ? (
+                            <>
+                              <Text span fw={600}>{reservationDropCount(r)} drop promesse</Text>
+                              {' · '}
+                            </>
+                          ) : null}
+                          {LABEL_BLOOMING_DROP_CURRENT}:{' '}
                           <Text span fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {formatEuro(r.effective_price_cents, 'EUR')}
+                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency ?? 'EUR')}
                           </Text>
                           .
                         </Text>
@@ -324,17 +333,26 @@ export default function MyReservationsPage(): ReactElement {
                           Il pagamento non è andato a buon fine. Riprova con «Conferma il contributo».
                         </Alert>
                         <Text size="sm">
-                          La tua Drop attualmente ammonta a{' '}
+                          {LABEL_BLOOMING_DROP_CURRENT}:{' '}
                           <Text span fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {formatEuro(r.effective_price_cents, 'EUR')}
+                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency ?? 'EUR')}
                           </Text>
                           .
                         </Text>
                       </Stack>
                     ) : null}
 
-                    {r.status !== 'converted_to_payment' && r.status !== 'cancelled' && r.status !== 'expired' && canPay ? (
+                    {r.status !== 'converted_to_payment' && r.status !== 'cancelled' && r.status !== 'expired' && canPay && c ? (
                       <Stack gap="sm">
+                        <Text size="xs" c="dimmed">
+                          Confermi{' '}
+                          <Text span fw={600}>
+                            {formatEuro(reservationPaymentAmountCents(c, r), c.currency ?? 'EUR')}
+                          </Text>
+                          {reservationDropCount(r) > 1
+                            ? ` (${reservationDropCount(r)} Blooming drop al prezzo attuale).`
+                            : ' (1 Blooming drop).'}
+                        </Text>
                         <Button type="button" onClick={() => void startPayment(r.id)} loading={pay === 'pending'}>
                           Conferma il contributo
                         </Button>
@@ -345,23 +363,35 @@ export default function MyReservationsPage(): ReactElement {
                         ) : null}
                         {pay && pay !== 'pending' && pay !== 'error' ? (
                           <Stack gap="sm">
-                            <Text size="sm" c="dimmed">
-                              Stato intent: <strong>{pay.status}</strong> — {formatEuro(pay.amount_cents, pay.currency)}
-                            </Text>
-                            <StripePaymentForm
-                              payment={pay}
-                              returnNextPath="/me/reservations"
-                              onCompleted={() => {
-                                setPaymentById((m) => {
-                                  const next = { ...m }
-                                  delete next[r.id]
-                                  return next
-                                })
-                                setReloadKey((k) => k + 1)
-                                window.setTimeout(() => setReloadKey((k) => k + 1), 1200)
-                                navigate('/me/reservations?payment=success', { replace: true })
-                              }}
-                            />
+                            {pay.provider === 'mock' ? (
+                              <Alert color="teal" variant="light">
+                                <Text size="sm">
+                                  Conferma registrata per {formatEuro(pay.amount_cents, pay.currency)}. In anteprima non
+                                  serve la carta: l’addebito seguirà le regole della campagna.
+                                </Text>
+                              </Alert>
+                            ) : (
+                              <>
+                                <Text size="sm" c="dimmed">
+                                  Importo da pagare:{' '}
+                                  <Text span fw={700}>{formatEuro(pay.amount_cents, pay.currency)}</Text>
+                                </Text>
+                                <StripePaymentForm
+                                  payment={pay}
+                                  returnNextPath="/me/reservations"
+                                  onCompleted={() => {
+                                    setPaymentById((m) => {
+                                      const next = { ...m }
+                                      delete next[r.id]
+                                      return next
+                                    })
+                                    setReloadKey((k) => k + 1)
+                                    window.setTimeout(() => setReloadKey((k) => k + 1), 1200)
+                                    navigate('/me/reservations?payment=success', { replace: true })
+                                  }}
+                                />
+                              </>
+                            )}
                           </Stack>
                         ) : null}
                       </Stack>

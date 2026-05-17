@@ -26,11 +26,15 @@ import { StripePaymentForm } from '../components/StripePaymentForm'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch, apiFetchForm } from '../lib/api/client'
 import {
+  bloomingCapForDisplay,
   campaignBloomProgressPercent,
   campaignHasReachedBloom,
   reservationBlocksNewDroplet,
+  reservationDropCount,
   reservationEligibleForPayment,
+  reservationPaymentAmountCents,
 } from '../lib/bloom'
+import { LABEL_BLOOMING_DROP_CURRENT } from '../lib/dropMechanics'
 import { campaignCategoryLabel, campaignStatusBadgeColor, campaignStatusLabel } from '../lib/campaignLabels'
 import {
   hasTransparentZeroProfit,
@@ -459,8 +463,8 @@ export default function CampaignDetailPage(): ReactElement {
       setPayment(parsed.data)
       setPaymentMsg(
         parsed.data.provider === 'mock'
-          ? 'Intent di pagamento mock creato.'
-          : 'Completa il pagamento qui sotto (carta di test: 4242 4242 4242 4242).',
+          ? null
+          : 'Inserisci i dati della carta qui sotto per completare il contributo.',
       )
     } catch {
       setPayment(null)
@@ -499,6 +503,13 @@ export default function CampaignDetailPage(): ReactElement {
   const reserveOk = reserveMsg?.includes('annaffiatoio') ?? false
   const bloomed = campaignHasReachedBloom(campaign)
   const bloomPct = campaignBloomProgressPercent(campaign)
+  const bloomingCap = bloomingCapForDisplay(campaign)
+  const reservationDrops =
+    effectiveReservation !== null ? reservationDropCount(effectiveReservation) : 1
+  const reservationPayCents =
+    campaign && effectiveReservation
+      ? reservationPaymentAmountCents(campaign, effectiveReservation)
+      : 0
   const showAddDroplet =
     canReserve &&
     (effectiveReservation === null || !reservationBlocksNewDroplet(effectiveReservation.status))
@@ -890,7 +901,15 @@ export default function CampaignDetailPage(): ReactElement {
                               growing drops (posti)
                             </Text>
                             <Text size="xs" c="dimmed">
-                              Quota di riferimento:{' '}
+                              {reservationDrops > 1 ? (
+                                <>
+                                  <Text span fw={600} c="dark">
+                                    {reservationDrops} Growing drop promesse
+                                  </Text>
+                                  {' · '}
+                                </>
+                              ) : null}
+                              Impegno totale (fino al Bloom):{' '}
                               <Text span fw={700} c="dark">
                                 {formatEuro(effectiveReservation.effective_price_cents, campaign.currency)}
                               </Text>
@@ -922,25 +941,42 @@ export default function CampaignDetailPage(): ReactElement {
                           <Stack gap="sm">
                             <Alert color="teal" variant="light" p="sm" title="Bloom raggiunto">
                               <Text size="xs">
-                                Il valore della tua Drop può ancora aggiornarsi al ribasso fino a Full bloom o fine campagna.
-                                Qui sotto, quando disponibile, confermi il contributo sull’importo dovuto in quel momento.
+                                La campagna è andata a buon fine. Il {LABEL_BLOOMING_DROP_CURRENT.toLowerCase()} può
+                                ancora scendere fino al limite o alla fine della raccolta; confermi il contributo
+                                sull’importo indicato dal sistema in quel momento.
                               </Text>
                             </Alert>
                             <Text size="xs">
-                              Importo attuale della tua Drop:{' '}
+                              {reservationDrops > 1 ? (
+                                <>
+                                  <Text span fw={600}>Drop promesse: {reservationDrops}</Text>
+                                  {' · '}
+                                </>
+                              ) : null}
+                              {LABEL_BLOOMING_DROP_CURRENT}:{' '}
                               <Text span fw={700}>
-                                {formatEuro(effectiveReservation.effective_price_cents, campaign.currency)}
+                                {formatEuro(reservationPayCents, campaign.currency)}
                               </Text>
+                              {reservationDrops > 1 ? (
+                                <Text span c="dimmed">
+                                  {' '}
+                                  ({reservationDrops} ×{' '}
+                                  {formatEuro(campaign.current_price_cents, campaign.currency)})
+                                </Text>
+                              ) : null}
                               .
                             </Text>
-                            {campaign.full_bloom_drops != null &&
-                            campaign.full_bloom_drops !== undefined &&
-                            campaign.full_bloom_drops > 0 ? (
+                            {bloomingCap !== null ? (
                               <Text size="xs" c="dimmed">
-                                Blooming drops nella campagna: {campaign.active_reservations_count} /{' '}
-                                {campaign.full_bloom_drops} posti verso il tetto di fioritura.
+                                Blooming drops nella campagna: {campaign.active_reservations_count} / {bloomingCap}{' '}
+                                posti verso il tetto di fioritura.
                               </Text>
-                            ) : null}
+                            ) : (
+                              <Text size="xs" c="dimmed">
+                                Blooming drops nella campagna: {campaign.active_reservations_count} adesioni dopo il
+                                Bloom.
+                              </Text>
+                            )}
                           </Stack>
                         ) : null}
 
@@ -950,9 +986,9 @@ export default function CampaignDetailPage(): ReactElement {
                               <Text size="xs">Pagamento non riuscito — riprova qui sotto.</Text>
                             </Alert>
                             <Text size="xs">
-                              Importo attuale della tua Drop:{' '}
+                              {LABEL_BLOOMING_DROP_CURRENT}:{' '}
                               <Text span fw={700}>
-                                {formatEuro(effectiveReservation.effective_price_cents, campaign.currency)}
+                                {formatEuro(reservationPayCents, campaign.currency)}
                               </Text>
                               .
                             </Text>
@@ -965,8 +1001,14 @@ export default function CampaignDetailPage(): ReactElement {
                         effectiveReservation.status !== 'expired' ? (
                           <Stack gap="sm" mt="sm">
                             <Text size="xs" c="dimmed" lh={1.5}>
-                              Confermi sull’importo della Drop indicato dal sistema al momento dell’incasso (dopo il Bloom
-                              può ancora variare fino a conclusione campagna).
+                              Confermi il contributo per{' '}
+                              <Text span fw={600}>
+                                {formatEuro(reservationPayCents, campaign.currency)}
+                              </Text>
+                              {reservationDrops > 1
+                                ? ` (${reservationDrops} Blooming drop al prezzo di campagna attuale).`
+                                : ' (1 Blooming drop al prezzo di campagna attuale).'}
+                              {' '}L’importo può ancora variare fino alla chiusura della campagna.
                             </Text>
                             <Button
                               type="button"
@@ -1002,22 +1044,39 @@ export default function CampaignDetailPage(): ReactElement {
                             ) : null}
                             {payment && payment !== 'pending' ? (
                               <Stack gap="sm">
-                                <Text size="xs" c="dimmed">
-                                  Stato: <strong>{payment.status}</strong> —{' '}
-                                  {formatEuro(payment.amount_cents, payment.currency)}
-                                </Text>
-                                <StripePaymentForm
-                                  payment={payment}
-                                  returnNextPath={`/campaigns/${encodeURIComponent(campaign.slug)}`}
-                                  onCompleted={() => {
-                                    setPaymentMsg('Pagamento inviato.')
-                                    setReloadTick((t) => t + 1)
-                                    window.setTimeout(() => setReloadTick((t) => t + 1), 1200)
-                                    navigate(`/campaigns/${encodeURIComponent(campaign.slug)}?payment=success`, {
-                                      replace: true,
-                                    })
-                                  }}
-                                />
+                                {payment.provider === 'mock' ? (
+                                  <Alert color="teal" variant="light" p="sm">
+                                    <Text size="xs">
+                                      Conferma registrata per{' '}
+                                      <Text span fw={700}>
+                                        {formatEuro(payment.amount_cents, payment.currency)}
+                                      </Text>
+                                      . In questa anteprima non serve inserire la carta: l’addebito seguirà le regole
+                                      della campagna quando previsto.
+                                    </Text>
+                                  </Alert>
+                                ) : (
+                                  <>
+                                    <Text size="xs" c="dimmed">
+                                      Importo da pagare:{' '}
+                                      <Text span fw={700}>
+                                        {formatEuro(payment.amount_cents, payment.currency)}
+                                      </Text>
+                                    </Text>
+                                    <StripePaymentForm
+                                      payment={payment}
+                                      returnNextPath={`/campaigns/${encodeURIComponent(campaign.slug)}`}
+                                      onCompleted={() => {
+                                        setPaymentMsg('Pagamento completato.')
+                                        setReloadTick((t) => t + 1)
+                                        window.setTimeout(() => setReloadTick((t) => t + 1), 1200)
+                                        navigate(`/campaigns/${encodeURIComponent(campaign.slug)}?payment=success`, {
+                                          replace: true,
+                                        })
+                                      }}
+                                    />
+                                  </>
+                                )}
                               </Stack>
                             ) : null}
                           </Stack>

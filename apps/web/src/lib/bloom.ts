@@ -37,3 +37,30 @@ const BLOCKING_RESERVATION_STATUSES = ['pending', 'active', 'failed', 'converted
 export function reservationBlocksNewDroplet(status: string): boolean {
   return (BLOCKING_RESERVATION_STATUSES as readonly string[]).includes(status)
 }
+
+export function reservationDropCount(reservation: { drop_count?: number }): number {
+  return Math.max(1, reservation.drop_count ?? 1)
+}
+
+/** Importo da addebitare al momento del pagamento (prezzo campagna × drop promesse). */
+export function reservationPaymentAmountCents(
+  campaign: { current_price_cents: number },
+  reservation: { drop_count?: number },
+): number {
+  return campaign.current_price_cents * reservationDropCount(reservation)
+}
+
+/**
+ * Tetto blooming drops mostrabile in UI. I default automatici (≈ obiettivo lordo ÷ 100 €)
+ * producono numeri enormi e fuorvianti: in quel caso non mostriamo il denominatore.
+ */
+export function bloomingCapForDisplay(campaign: {
+  target_supporters: number
+  full_bloom_drops?: number | null
+}): number | null {
+  const cap = campaign.full_bloom_drops
+  if (cap == null || cap <= 0) return null
+  const target = Math.max(1, campaign.target_supporters)
+  if (cap > Math.max(target * 20, 2_000)) return null
+  return cap
+}

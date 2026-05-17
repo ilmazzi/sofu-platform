@@ -1,7 +1,7 @@
 import { type FormEvent, type ReactElement, useMemo, useState } from 'react'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
-import { Alert, Button, Code, Stack, Text } from '@mantine/core'
+import { Alert, Button, Stack } from '@mantine/core'
 import type { components } from '@sofu/contracts'
 import { getStripePublishableKey } from '../lib/stripePublishableKey'
 
@@ -73,33 +73,19 @@ export function StripePaymentForm({
   /** Path dopo redirect 3DS (es. Le mie drop: /me/reservations) */
   returnNextPath: string
   onCompleted?: () => void
-}): ReactElement {
+}): ReactElement | null {
+  /** In anteprima/sviluppo il provider mock non espone carta: niente riferimenti tecnici in UI. */
+  if (payment.provider === 'mock') {
+    return null
+  }
+
   const pk = getStripePublishableKey()
   const stripePromise = useMemo(() => (pk ? loadStripe(pk) : null), [pk])
 
-  if (payment.provider === 'mock') {
-    return (
-      <Stack gap="sm">
-        <Alert color="gray" variant="light" title="Modalità mock">
-          Stripe Elements non è usato con il provider mock.
-        </Alert>
-        {payment.provider_client_secret ? (
-          <Text size="sm" c="dimmed">
-            Client secret: <Code>{payment.provider_client_secret}</Code>
-          </Text>
-        ) : null}
-        <Text size="sm" c="dimmed">
-          Per un test end-to-end usa il webhook mock o imposta <Code>PAYMENT_PROVIDER=stripe</Code>.
-        </Text>
-      </Stack>
-    )
-  }
-
   if (!pk) {
     return (
-      <Alert color="red" variant="light">
-        Imposta <Code>VITE_STRIPE_PUBLISHABLE_KEY</Code> nel file <Code>.env</Code> del frontend (chiave pubblica{' '}
-        <Code>pk_test_…</Code>) e riavvia Vite.
+      <Alert color="orange" variant="light">
+        Il pagamento con carta non è ancora disponibile su questo ambiente. Riprova più tardi o contatta il supporto.
       </Alert>
     )
   }
@@ -107,7 +93,7 @@ export function StripePaymentForm({
   if (!payment.provider_client_secret) {
     return (
       <Alert color="red" variant="light">
-        Nessun client secret disponibile.
+        Non è stato possibile avviare il pagamento. Riprova tra qualche istante.
       </Alert>
     )
   }
@@ -115,7 +101,7 @@ export function StripePaymentForm({
   if (!stripePromise) {
     return (
       <Alert color="red" variant="light">
-        Stripe non inizializzato.
+        Non è stato possibile caricare il modulo di pagamento. Ricarica la pagina e riprova.
       </Alert>
     )
   }

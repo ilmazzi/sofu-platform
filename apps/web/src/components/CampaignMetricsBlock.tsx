@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 import { Alert, Divider, Group, SimpleGrid, Stack, Text } from '@mantine/core'
 import type { components } from '@sofu/contracts'
-import { campaignHasReachedBloom } from '../lib/bloom'
+import { bloomingCapForDisplay, campaignHasReachedBloom } from '../lib/bloom'
 import {
   DROP_DROPLETS_AND_CREATOR,
   DROP_NO_IMMEDIATE_CHARGE,
@@ -29,8 +29,10 @@ export function CampaignMetricsBlock({
   const bodySm = compact ? 'xs' : 'sm'
   const fullBloom = c.full_bloom_drops ?? null
   const bloomed = campaignHasReachedBloom(c)
-  const progressDenominator =
-    bloomed && fullBloom !== null && fullBloom > 0 ? fullBloom : c.target_supporters
+  const bloomingCap = bloomingCapForDisplay(c)
+  const progressDenominator = bloomed
+    ? (bloomingCap ?? c.target_supporters)
+    : c.target_supporters
 
   if (creatorPreview) {
     return (
@@ -101,7 +103,9 @@ export function CampaignMetricsBlock({
         </Group>
         <Text size="xs" c="dimmed" mt={6}>
           {bloomed
-            ? `Dopo il Bloom le adesioni sono “in fiore”: avanzamento verso il tetto (${progressDenominator} posti). `
+            ? bloomingCap !== null
+              ? `Dopo il Bloom le adesioni sono “in fiore”: avanzamento verso il tetto (${progressDenominator} posti). `
+              : 'Dopo il Bloom le adesioni sono blooming drops: ogni nuova quota può far scendere il prezzo per tutti. '
             : 'Fase di crescita: adesioni raccolte fino al Bloom (posti, non importo in euro). '}
           {DROP_QUOTE_VS_VALUE_HINT}
         </Text>
