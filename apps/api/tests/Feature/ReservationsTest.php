@@ -51,6 +51,36 @@ class ReservationsTest extends TestCase
         ]);
     }
 
+    public function test_supporter_can_pledge_multiple_drops_in_one_reservation(): void
+    {
+        $campaign = Campaign::factory()->published()->create([
+            'total_amount_cents' => 40_000_00,
+            'min_price_cents' => 500_000,
+            'max_price_cents' => 5_000_00,
+            'current_price_cents' => 5_000_00,
+            'active_reservations_count' => 0,
+        ]);
+        $supporter = User::factory()->create();
+
+        $this
+            ->actingAs($supporter)
+            ->withHeader('Idempotency-Key', 'eight-drops')
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations", [
+                'drop_count' => 8,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.drop_count', 8)
+            ->assertJsonPath('data.price_quoted_cents', 5_000_00)
+            ->assertJsonPath('data.effective_price_cents', 40_000_00)
+            ->assertJsonPath('data.price_snapshot.active_reservations_count', 8);
+
+        $this->assertDatabaseHas('campaigns', [
+            'id' => $campaign->id,
+            'active_reservations_count' => 8,
+            'current_price_cents' => 5_000_00,
+        ]);
+    }
+
     public function test_second_supporter_lowers_current_campaign_price(): void
     {
         $campaign = Campaign::factory()->published()->create([
@@ -326,9 +356,11 @@ class ReservationsTest extends TestCase
 
         $first = User::factory()->create();
         $second = User::factory()->create();
+        $third = User::factory()->create();
 
         $this->actingAs($first)->withHeader('Idempotency-Key', 'bloom-a')->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")->assertCreated();
         $this->actingAs($second)->withHeader('Idempotency-Key', 'bloom-b')->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")->assertCreated();
+        $this->actingAs($third)->withHeader('Idempotency-Key', 'bloom-c')->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")->assertCreated();
 
         $campaign->refresh();
         $this->assertTrue($campaign->hasReachedBloom());

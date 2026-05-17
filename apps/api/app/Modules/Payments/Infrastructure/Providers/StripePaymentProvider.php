@@ -22,7 +22,7 @@ class StripePaymentProvider implements PaymentProvider
 
         $stripe = new StripeClient($secret);
         $intent = $stripe->paymentIntents->create([
-            'amount' => $reservation->effective_price_cents,
+            'amount' => $reservation->paymentAmountCents(),
             'currency' => $currency,
             'metadata' => [
                 'reservation_id' => (string) $reservation->id,

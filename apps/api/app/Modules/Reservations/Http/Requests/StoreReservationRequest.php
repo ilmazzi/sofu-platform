@@ -18,7 +18,13 @@ class StoreReservationRequest extends FormRequest
     {
         return [
             'idempotency_key' => ['required', 'string', 'max:160'],
+            'drop_count' => ['sometimes', 'integer', 'min:1', 'max:10000'],
         ];
+    }
+
+    public function dropCount(): int
+    {
+        return max(1, (int) ($this->validated('drop_count') ?? 1));
     }
 
     public function idempotencyKey(): string

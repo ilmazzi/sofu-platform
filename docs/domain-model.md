@@ -4,7 +4,9 @@
 
 Sofu helps creators launch campaigns where supporters join as a group. The more supporters join, the lower the final price becomes for everyone, within defined minimum and maximum bounds.
 
-The real product should treat a support action as a reservation first. Payment can be authorized, captured, or finalized according to the chosen payment model, but the business language should distinguish reservations from donations.
+The real product should treat a support action as a reservation first. Per il modello Kickstarter-like Sofu: al pledge si registra un **metodo di pagamento valido** senza addebito; l’**incasso** avviene solo se la campagna risulta **funded** alla deadline, con importo secondo la regola **prezzo alla capture** (vedi spec). Il linguaggio business distingue sempre prenotazioni da donazioni.
+
+**Deadline, funded / not funded, pledge e incasso:** vedi [`campaign-funding-and-deadline.md`](./campaign-funding-and-deadline.md).
 
 ## Main Actors
 

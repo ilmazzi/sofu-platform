@@ -2,6 +2,8 @@
 
 namespace App\Modules\Campaigns\Http\Requests;
 
+use App\Modules\Campaigns\Application\NormalizeCampaignCostItems;
+use App\Modules\Campaigns\Domain\CampaignCostItemLabel;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -32,6 +34,9 @@ class StoreCampaignRequest extends FormRequest
         if ($this->has('video_url') && is_string($this->input('video_url')) && trim($this->input('video_url')) === '') {
             $merge['video_url'] = null;
         }
+        if ($this->has('cost_items') && is_array($this->input('cost_items'))) {
+            $merge['cost_items'] = NormalizeCampaignCostItems::normalize($this->input('cost_items'));
+        }
         $this->merge($merge);
     }
 
@@ -54,7 +59,7 @@ class StoreCampaignRequest extends FormRequest
             'duration_days' => ['nullable', 'integer', 'min:1', 'max:730'],
             'cost_items' => ['required', 'array', 'min:1', 'max:100'],
             'cost_items.*.label' => ['required', 'string', 'max:160'],
-            'cost_items.*.amount_cents' => ['required', 'integer', 'min:1'],
+            'cost_items.*.amount_cents' => ['required', 'integer', 'min:0'],
         ];
     }
 
@@ -80,6 +85,34 @@ class StoreCampaignRequest extends FormRequest
                     'full_bloom_drops',
                     'Le blooming drops (tetto) devono essere maggiori o uguali alle growing drops (soglia Bloom).',
                 );
+            }
+
+            if (NormalizeCampaignCostItems::nonGuadagnoSubtotalCents($items) <= 0) {
+                $validator->errors()->add(
+                    'cost_items',
+                    'Aggiungi almeno una voce di costo (oltre a Guadagno) con importo maggiore di zero.',
+                );
+            }
+
+            $last = $items[array_key_last($items)] ?? null;
+            if ($last === null || ! CampaignCostItemLabel::isGuadagno((string) ($last['label'] ?? ''))) {
+                $validator->errors()->add('cost_items', 'L’ultima voce deve essere Guadagno.');
+            }
+
+            foreach ($items as $index => $item) {
+                $isGuadagno = CampaignCostItemLabel::isGuadagno((string) ($item['label'] ?? ''));
+                $cents = (int) ($item['amount_cents'] ?? 0);
+                if ($isGuadagno && $index !== array_key_last($items)) {
+                    $validator->errors()->add('cost_items', 'La voce Guadagno può comparire solo in fondo all’elenco.');
+                    break;
+                }
+                if (! $isGuadagno && $cents < 1) {
+                    $validator->errors()->add(
+                        'cost_items',
+                        'Ogni voce di costo (tranne Guadagno) deve avere importo maggiore di zero.',
+                    );
+                    break;
+                }
             }
 
             if ($total <= 0 || $n < 1 || $validator->errors()->isNotEmpty()) {

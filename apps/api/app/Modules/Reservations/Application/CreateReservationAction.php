@@ -25,16 +25,20 @@ class CreateReservationAction
     /**
      * @return array{reservation: Reservation, created: bool}
      */
-    public function execute(Campaign $campaign, User $supporter, string $idempotencyKey): array
+    public function execute(Campaign $campaign, User $supporter, string $idempotencyKey, int $dropCount = 1): array
     {
+        $dropCount = max(1, min(10_000, $dropCount));
+
         $payloadHash = hash('sha256', implode(':', [
             'campaign',
             $campaign->id,
             'supporter',
             $supporter->id,
+            'drops',
+            $dropCount,
         ]));
 
-        $result = DB::transaction(function () use ($campaign, $supporter, $idempotencyKey, $payloadHash): array {
+        $result = DB::transaction(function () use ($campaign, $supporter, $idempotencyKey, $payloadHash, $dropCount): array {
             $existing = Reservation::query()
                 ->where('supporter_id', $supporter->id)
                 ->where('idempotency_key', $idempotencyKey)
@@ -94,8 +98,21 @@ class CreateReservationAction
             }
 
             $priceQuotedCents = $lockedCampaign->current_price_cents;
-            $activeReservationsCount = $lockedCampaign->active_reservations_count + 1;
-            $effectivePriceCents = $this->priceCalculator->calculate(
+            $activeReservationsCount = $lockedCampaign->active_reservations_count;
+            $pledgedTotalCents = 0;
+
+            for ($i = 0; $i < $dropCount; $i++) {
+                $activeReservationsCount++;
+                $pledgedTotalCents += $this->priceCalculator->calculate(
+                    $lockedCampaign->total_amount_cents,
+                    $activeReservationsCount,
+                    $lockedCampaign->min_price_cents,
+                    $lockedCampaign->max_price_cents,
+                );
+            }
+
+            $effectivePriceCents = $pledgedTotalCents;
+            $finalDropPriceCents = $this->priceCalculator->calculate(
                 $lockedCampaign->total_amount_cents,
                 $activeReservationsCount,
                 $lockedCampaign->min_price_cents,
@@ -107,7 +124,7 @@ class CreateReservationAction
             $snapshot = CampaignPriceSnapshot::create([
                 'campaign_id' => $lockedCampaign->id,
                 'active_reservations_count' => $activeReservationsCount,
-                'calculated_price_cents' => $effectivePriceCents,
+                'calculated_price_cents' => $finalDropPriceCents,
                 'min_price_cents' => $lockedCampaign->min_price_cents,
                 'max_price_cents' => $lockedCampaign->max_price_cents,
                 'total_amount_cents' => $lockedCampaign->total_amount_cents,
@@ -119,6 +136,7 @@ class CreateReservationAction
                     'status' => ReservationStatus::Active,
                     'price_quoted_cents' => $priceQuotedCents,
                     'effective_price_cents' => $effectivePriceCents,
+                    'drop_count' => $dropCount,
                     'price_snapshot_id' => $snapshot->id,
                     'idempotency_key' => $idempotencyKey,
                     'payload_hash' => $payloadHash,
@@ -131,6 +149,7 @@ class CreateReservationAction
                     'status' => ReservationStatus::Active,
                     'price_quoted_cents' => $priceQuotedCents,
                     'effective_price_cents' => $effectivePriceCents,
+                    'drop_count' => $dropCount,
                     'price_snapshot_id' => $snapshot->id,
                     'idempotency_key' => $idempotencyKey,
                     'payload_hash' => $payloadHash,
@@ -139,19 +158,20 @@ class CreateReservationAction
 
             $lockedCampaign->forceFill([
                 'active_reservations_count' => $activeReservationsCount,
-                'current_price_cents' => $effectivePriceCents,
+                'current_price_cents' => $finalDropPriceCents,
             ])->save();
 
             $this->audit->record(AuditActions::RESERVATION_CREATED, $supporter, $reservation, [
                 'campaign_id' => $lockedCampaign->id,
                 'price_quoted_cents' => $priceQuotedCents,
                 'effective_price_cents' => $effectivePriceCents,
+                'drop_count' => $dropCount,
             ]);
 
             $this->audit->record(AuditActions::CAMPAIGN_PRICE_CHANGED, $supporter, $lockedCampaign, [
                 'active_reservations_count' => $activeReservationsCount,
                 'previous_price_cents' => $priceQuotedCents,
-                'current_price_cents' => $effectivePriceCents,
+                'current_price_cents' => $finalDropPriceCents,
                 'price_snapshot_id' => $snapshot->id,
             ]);
 

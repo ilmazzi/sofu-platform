@@ -44,10 +44,10 @@ final class RunReservationLoadSimulationAction
             return $this->errorOutcome($campaign, 'La campagna deve essere in stato published o activated.');
         }
 
-        if ($stayBelowBloom && $campaign->target_supporters < 2) {
+        if ($stayBelowBloom && $campaign->bloomSupportersThreshold() < 2) {
             return $this->errorOutcome(
                 $campaign,
-                'Con stay_below_bloom attivo servono almeno 2 growing drops (target_supporters), altrimenti ogni prenotazione raggiunge subito il Bloom.',
+                'Con stay_below_bloom attivo la soglia Bloom (target + cuscinetto) deve essere almeno 2, altrimenti ogni prenotazione raggiunge subito il Bloom.',
             );
         }
 
@@ -71,9 +71,10 @@ final class RunReservationLoadSimulationAction
                 ->where('status', ReservationStatus::Active)
                 ->exists();
 
+            $bloomThreshold = $campaign->bloomSupportersThreshold();
             $roomForReserve = $stayBelowBloom
-                ? $activeCount < $campaign->target_supporters - 1
-                : $activeCount < $campaign->target_supporters;
+                ? $activeCount < $bloomThreshold - 1
+                : $activeCount < $bloomThreshold;
 
             $roll = mt_rand(1, 10_000) / 10_000;
             $tryCancel = $cancellableExists && ! $atBloom && $roll < $cancelProbability;

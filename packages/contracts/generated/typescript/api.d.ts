@@ -1643,6 +1643,8 @@ export interface components {
             sofu_fee_waiver_review_note?: string | null;
             /** @description Obiettivo growing drops (soglia Bloom) */
             target_supporters: number;
+            /** @description Soglia operativa Bloom incluso cuscinetto incassi (ceil(target × (1 + buffer))). Config SOFU_PAYMENT_ATTRITION_BUFFER. */
+            bloom_supporters_threshold: number;
             /** @description Tetto blooming drops (fioritura completa) */
             full_bloom_drops?: number | null;
             active_reservations_count: number;
@@ -1729,7 +1731,10 @@ export interface components {
             supporter_id: string;
             status: components["schemas"]["ReservationStatus"];
             price_quoted_cents: number;
+            /** Impegno totale (somma delle drop promesse al momento dell’adesione). */
             effective_price_cents: number;
+            /** Numero di drop promesse in un’unica adesione. */
+            drop_count: number;
             price_snapshot_id?: string | null;
             campaign?: components["schemas"]["ReservationCampaignEmbed"];
             price_snapshot?: components["schemas"]["PriceSnapshotEmbed"];

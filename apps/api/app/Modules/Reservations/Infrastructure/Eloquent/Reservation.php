@@ -19,6 +19,7 @@ class Reservation extends Model
         'status',
         'price_quoted_cents',
         'effective_price_cents',
+        'drop_count',
         'price_snapshot_id',
         'idempotency_key',
         'payload_hash',
@@ -30,7 +31,21 @@ class Reservation extends Model
             'status' => ReservationStatus::class,
             'price_quoted_cents' => 'integer',
             'effective_price_cents' => 'integer',
+            'drop_count' => 'integer',
         ];
+    }
+
+    public function dropCount(): int
+    {
+        return max(1, (int) ($this->drop_count ?? 1));
+    }
+
+    /** Importo da addebitare (prezzo di campagna corrente × numero drop). */
+    public function paymentAmountCents(): int
+    {
+        $this->loadMissing('campaign');
+
+        return $this->campaign->current_price_cents * $this->dropCount();
     }
 
     public function campaign(): BelongsTo

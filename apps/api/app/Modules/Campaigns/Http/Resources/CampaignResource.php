@@ -30,6 +30,7 @@ class CampaignResource extends JsonResource
             'sofu_fee_waiver_state' => $this->sofu_fee_waiver_state->value,
             'sofu_fee_waiver_review_note' => $this->sofu_fee_waiver_review_note,
             'target_supporters' => $this->target_supporters,
+            'bloom_supporters_threshold' => $this->bloomSupportersThreshold(),
             'full_bloom_drops' => $this->full_bloom_drops,
             'active_reservations_count' => $this->active_reservations_count,
             'min_price_cents' => $this->min_price_cents,

@@ -21,7 +21,12 @@ class ReservationController
         Campaign $campaign,
         CreateReservationAction $createReservation,
     ): JsonResponse {
-        $result = $createReservation->execute($campaign, $request->user(), $request->idempotencyKey());
+        $result = $createReservation->execute(
+            $campaign,
+            $request->user(),
+            $request->idempotencyKey(),
+            $request->dropCount(),
+        );
 
         return ReservationResource::make($result['reservation'])
             ->response()

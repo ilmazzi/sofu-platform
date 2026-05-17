@@ -532,6 +532,21 @@ paths:
       parameters:
         - $ref: '#/components/parameters/CampaignSlug'
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotency_key:
+                  type: string
+                  maxLength: 160
+                drop_count:
+                  type: integer
+                  minimum: 1
+                  maximum: 10000
+                  description: Quante drop il sostenitore promette di versare (default 1).
       responses:
         '200':
           description: Idempotent replay (same key + same supporter/campaign)
@@ -1175,6 +1190,7 @@ components:
         - status
         - currency
         - target_supporters
+        - bloom_supporters_threshold
         - active_reservations_count
         - min_price_cents
         - max_price_cents
@@ -1223,6 +1239,10 @@ components:
         target_supporters:
           type: integer
           description: Obiettivo growing drops (soglia Bloom)
+        bloom_supporters_threshold:
+          type: integer
+          description: >
+            Soglia operativa Bloom incluso cuscinetto incassi (ceil(target × (1 + buffer))). Config SOFU_PAYMENT_ATTRITION_BUFFER.
         full_bloom_drops:
           type: integer
           nullable: true
@@ -1415,6 +1435,7 @@ components:
         - status
         - price_quoted_cents
         - effective_price_cents
+        - drop_count
       properties:
         id:
           type: string
@@ -1431,6 +1452,11 @@ components:
           type: integer
         effective_price_cents:
           type: integer
+          description: Impegno totale (somma delle drop promesse al momento dell’adesione).
+        drop_count:
+          type: integer
+          minimum: 1
+          description: Numero di drop promesse in un’unica adesione.
         price_snapshot_id:
           type: string
           nullable: true

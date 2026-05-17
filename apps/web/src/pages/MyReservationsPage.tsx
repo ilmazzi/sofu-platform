@@ -286,7 +286,15 @@ export default function MyReservationsPage(): ReactElement {
                           (posti)
                         </Text>
                         <Text size="sm" c="dimmed">
-                          Quota di riferimento (al momento della drop):{' '}
+                          {(r.drop_count ?? 1) > 1 ? (
+                            <>
+                              <Text span fw={600} c="dark">
+                                {r.drop_count} drop promesse
+                              </Text>
+                              {' · '}
+                            </>
+                          ) : null}
+                          Impegno totale:{' '}
                           <Text span fw={700} c="dark" style={{ fontVariantNumeric: 'tabular-nums' }}>
                             {formatEuro(r.effective_price_cents, 'EUR')}
                           </Text>

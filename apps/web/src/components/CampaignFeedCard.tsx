@@ -3,9 +3,18 @@ import { Badge, Box, Group, Progress, Stack, Text } from '@mantine/core'
 import { Link } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
 import { campaignCategoryLabel, campaignStatusBadgeColor, campaignStatusLabel } from '../lib/campaignLabels'
+import { campaignHasReachedBloom } from '../lib/bloom'
 import { formatEuro, supporterProgressPercent } from '../lib/campaignMetrics'
 import { CampaignCoverImage } from './CampaignCoverImage'
 import { growthStageFromSupporterPercent } from '../lib/campaignGrowthStages'
+import {
+  hasTransparentZeroProfit,
+  ZERO_PROFIT_BADGE,
+} from '../lib/campaignCosts'
+import {
+  LABEL_BLOOMING_DROP_CURRENT,
+  LABEL_GROWING_DROP,
+} from '../lib/dropMechanics'
 
 type Campaign = components['schemas']['Campaign']
 
@@ -19,8 +28,12 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
   const cat = campaignCategoryLabel(c.category)
   const supPct = supporterProgressPercent(c)
   const stage = growthStageFromSupporterPercent(supPct)
+  const bloomed = campaignHasReachedBloom(c)
+  const displayPriceCents = bloomed ? c.current_price_cents : c.max_price_cents
+  const priceLabel = bloomed ? LABEL_BLOOMING_DROP_CURRENT : LABEL_GROWING_DROP
   const savings = Math.max(0, (c.max_price_cents - c.current_price_cents) / 100)
   const savingsPct = c.max_price_cents > 0 ? Math.round((savings / (c.max_price_cents / 100)) * 100) : 0
+  const transparentZeroProfit = hasTransparentZeroProfit(c.cost_items)
 
   return (
     <Box
@@ -93,6 +106,12 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
           {blurb}
         </Text>
 
+        {transparentZeroProfit ? (
+          <Badge color="teal" variant="light" size="sm" fullWidth style={{ whiteSpace: 'normal', height: 'auto', padding: '6px 10px' }}>
+            {ZERO_PROFIT_BADGE}
+          </Badge>
+        ) : null}
+
         <Box>
           <Group justify="space-between" mb={6}>
             <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.08em' }}>
@@ -124,13 +143,13 @@ export function CampaignFeedCard({ c }: { c: Campaign }): ReactElement {
           <Group justify="space-between" align="flex-end" wrap="nowrap">
             <div>
               <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.08em' }} mb={2}>
-                Prezzo
+                {priceLabel}
               </Text>
               <Text size="xl" fw={600} c="dark" lh={1} style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                {formatEuro(c.current_price_cents, c.currency)}
+                {formatEuro(displayPriceCents, c.currency)}
               </Text>
             </div>
-            {savingsPct > 0 ? (
+            {bloomed && savingsPct > 0 ? (
               <Text size="sm" fw={600} c="green.8">
                 -{savingsPct}%
               </Text>

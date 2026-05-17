@@ -20,6 +20,7 @@ class ReservationResource extends JsonResource
             'status' => $this->status->value,
             'price_quoted_cents' => $this->price_quoted_cents,
             'effective_price_cents' => $this->effective_price_cents,
+            'drop_count' => $this->dropCount(),
             'price_snapshot_id' => $this->price_snapshot_id ? (string) $this->price_snapshot_id : null,
             'campaign' => $this->whenLoaded('campaign', fn () => [
                 'id' => (string) $this->campaign->id,

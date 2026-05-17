@@ -40,7 +40,10 @@ class CancelReservationAction
 
             $lockedReservation->forceFill(['status' => ReservationStatus::Cancelled])->save();
 
-            $activeReservationsCount = max(0, $lockedCampaign->active_reservations_count - 1);
+            $activeReservationsCount = max(
+                0,
+                $lockedCampaign->active_reservations_count - $lockedReservation->dropCount(),
+            );
             $effectivePriceCents = $this->priceCalculator->calculate(
                 $lockedCampaign->total_amount_cents,
                 $activeReservationsCount,

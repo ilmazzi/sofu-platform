@@ -270,6 +270,9 @@ class PaymentsTest extends TestCase
             ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations")
             ->assertCreated();
 
+        $campaign->refresh();
+        $this->reserveUntilBloom($campaign);
+
         return [
             $supporter,
             Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail(),

@@ -42,7 +42,7 @@ class BackofficeReservationSimulationTest extends TestCase
         $this->assertGreaterThan(0, $created + $cancelled);
 
         $campaign->refresh();
-        $this->assertLessThan($campaign->target_supporters, (int) $campaign->active_reservations_count);
+        $this->assertFalse($campaign->hasReachedBloom());
     }
 
     public function test_operator_cannot_run_simulation(): void

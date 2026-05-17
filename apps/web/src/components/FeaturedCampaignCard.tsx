@@ -4,8 +4,17 @@ import { Link } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
 import { CampaignCoverImage } from './CampaignCoverImage'
 import { campaignCategoryLabel, campaignStatusBadgeColor, campaignStatusLabel } from '../lib/campaignLabels'
+import { campaignHasReachedBloom } from '../lib/bloom'
 import { formatEuro, supporterProgressPercent } from '../lib/campaignMetrics'
 import { growthStageFromSupporterPercent } from '../lib/campaignGrowthStages'
+import {
+  hasTransparentZeroProfit,
+  ZERO_PROFIT_BADGE,
+} from '../lib/campaignCosts'
+import {
+  LABEL_BLOOMING_DROP_CURRENT,
+  LABEL_GROWING_DROP,
+} from '../lib/dropMechanics'
 
 type Campaign = components['schemas']['Campaign']
 
@@ -34,8 +43,12 @@ export function FeaturedCampaignCard({
   const cat = campaignCategoryLabel(c.category)
   const supPct = supporterProgressPercent(c)
   const stage = growthStageFromSupporterPercent(supPct)
+  const bloomed = campaignHasReachedBloom(c)
+  const displayPriceCents = bloomed ? c.current_price_cents : c.max_price_cents
+  const priceLabel = bloomed ? LABEL_BLOOMING_DROP_CURRENT : LABEL_GROWING_DROP
   const savings = Math.max(0, (c.max_price_cents - c.current_price_cents) / 100)
   const savingsPct = c.max_price_cents > 0 ? Math.round((savings / (c.max_price_cents / 100)) * 100) : 0
+  const transparentZeroProfit = hasTransparentZeroProfit(c.cost_items)
 
   const badge = featuredType ? getBadgeConfig(featuredType) : null
 
@@ -121,6 +134,12 @@ export function FeaturedCampaignCard({
           </Text>
         </div>
 
+        {transparentZeroProfit ? (
+          <Badge color="teal" variant="light" size="sm" fullWidth style={{ whiteSpace: 'normal', height: 'auto', padding: '6px 10px' }}>
+            {ZERO_PROFIT_BADGE}
+          </Badge>
+        ) : null}
+
         <Box>
           <Group justify="space-between" mb={8}>
             <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.08em' }}>
@@ -151,27 +170,27 @@ export function FeaturedCampaignCard({
           <Group justify="space-between" align="flex-end" wrap="nowrap">
             <div>
               <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.08em' }} mb={4}>
-                Prezzo attuale
+                {priceLabel}
               </Text>
               <Text size="1.75rem" fw={600} c="dark" lh={1} style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                {formatEuro(c.current_price_cents, c.currency)}
+                {formatEuro(displayPriceCents, c.currency)}
               </Text>
             </div>
-            {savingsPct > 0 ? (
+            {bloomed && savingsPct > 0 ? (
               <Text size="sm" fw={600} c="green.8">
                 -{savingsPct}%
               </Text>
             ) : null}
           </Group>
-          {savingsPct > 0 ? (
+          {bloomed && savingsPct > 0 ? (
             <Text size="xs" c="dimmed" mt={8} fw={500}>
-              Risparmi {formatEuro(Math.round(savings * 100), c.currency)} vs picco
+              Risparmi {formatEuro(Math.round(savings * 100), c.currency)} vs {LABEL_GROWING_DROP}
             </Text>
-          ) : (
+          ) : !bloomed ? (
             <Text size="xs" c="dimmed" mt={8} fw={500}>
-              Prezzo al picco iniziale
+              Fino al Bloom il valore non scende
             </Text>
-          )}
+          ) : null}
         </Box>
 
         <Text size="xs" c="dimmed" ta="right" fw={500}>

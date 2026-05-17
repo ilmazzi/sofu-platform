@@ -17,7 +17,7 @@ class MockPaymentProvider implements PaymentProvider
             provider: 'mock',
             providerPaymentId: $providerPaymentId,
             clientSecret: 'mock_secret_'.$providerPaymentId,
-            amountCents: $reservation->effective_price_cents,
+            amountCents: $reservation->paymentAmountCents(),
             currency: $reservation->campaign->currency,
         );
     }

@@ -30,6 +30,7 @@ class CampaignsTest extends TestCase
                 'cost_items' => [
                     ['label' => 'Materiali', 'amount_cents' => 180000],
                     ['label' => 'Docenti', 'amount_cents' => 240000],
+                    ['label' => 'Guadagno', 'amount_cents' => 0],
                 ],
             ]);
 
@@ -42,7 +43,9 @@ class CampaignsTest extends TestCase
             ->assertJsonPath('data.min_price_cents', 1076)
             ->assertJsonPath('data.total_amount_cents', 430500)
             ->assertJsonPath('data.cost_subtotal_cents', 420000)
-            ->assertJsonCount(2, 'data.cost_items')
+            ->assertJsonCount(3, 'data.cost_items')
+            ->assertJsonPath('data.cost_items.2.label', 'Guadagno')
+            ->assertJsonPath('data.cost_items.2.amount_cents', 0)
             ->assertJsonPath('data.media_urls', []);
 
         $this->assertDatabaseHas('campaigns', [
@@ -112,5 +115,53 @@ class CampaignsTest extends TestCase
             ->getJson('/api/v1/campaigns/'.$campaign->slug)
             ->assertOk()
             ->assertJsonPath('data.slug', 'mia-bozza');
+    }
+
+    public function test_create_campaign_appends_guadagno_when_missing(): void
+    {
+        $user = User::factory()->creator()->create();
+
+        $this
+            ->actingAs($user)
+            ->postJson('/api/v1/campaigns', [
+                'title' => 'Progetto senza guadagno esplicito',
+                'description' => str_repeat('Descrizione valida per la campagna di test. ', 2),
+                'currency' => 'EUR',
+                'target_supporters' => 50,
+                'full_bloom_drops' => 200,
+                'duration_days' => 30,
+                'cost_items' => [
+                    ['label' => 'Attrezzatura', 'amount_cents' => 50_000],
+                ],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.cost_items.1.label', 'Guadagno')
+            ->assertJsonPath('data.cost_items.1.amount_cents', 0);
+
+        $this->assertDatabaseHas('campaign_cost_items', [
+            'label' => 'Guadagno',
+            'amount_cents' => 0,
+        ]);
+    }
+
+    public function test_create_campaign_rejects_only_zero_costs(): void
+    {
+        $user = User::factory()->creator()->create();
+
+        $this
+            ->actingAs($user)
+            ->postJson('/api/v1/campaigns', [
+                'title' => 'Solo guadagno zero',
+                'description' => str_repeat('Descrizione valida per la campagna di test. ', 2),
+                'currency' => 'EUR',
+                'target_supporters' => 50,
+                'full_bloom_drops' => 200,
+                'duration_days' => 30,
+                'cost_items' => [
+                    ['label' => 'Guadagno', 'amount_cents' => 0],
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['cost_items']);
     }
 }

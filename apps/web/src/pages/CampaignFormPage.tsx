@@ -26,6 +26,7 @@ import { useAuth } from '../context/AuthContext'
 import { apiFetch, apiFetchForm } from '../lib/api/client'
 import { CAMPAIGN_CATEGORY_OPTIONS } from '../lib/campaignCategories'
 import { formatCentsAsEuroField, parseEuroInputToCents } from '../lib/euroInput'
+import { GUADAGNO_COST_LABEL, isGuadagnoCostLabel } from '../lib/campaignCosts'
 import { formatEuro } from '../lib/campaignMetrics'
 
 type Campaign = components['schemas']['Campaign']
@@ -53,12 +54,14 @@ const DURATION_PRESETS = [
   { value: '90', label: '90 giorni' },
 ]
 
-function sumCostCents(rows: CostRow[]): number {
+function sumCostCents(rows: CostRow[], guadagnoEuro: string): number {
   let t = 0
   for (const r of rows) {
     const c = parseEuroInputToCents(r.amountEuro)
     if (c !== null && c > 0) t += c
   }
+  const g = parseEuroInputToCents(guadagnoEuro)
+  if (g !== null && g > 0) t += g
   return t
 }
 
@@ -97,11 +100,12 @@ export default function CampaignFormPage(): ReactElement {
     { label: 'Materiali', amountEuro: '3000' },
     { label: 'Manodopera', amountEuro: '1200' },
   ])
+  const [guadagnoEuro, setGuadagnoEuro] = useState('0')
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [imageFiles, setImageFiles] = useState<File[]>([])
 
-  const totalCents = useMemo(() => sumCostCents(costRows), [costRows])
+  const totalCents = useMemo(() => sumCostCents(costRows, guadagnoEuro), [costRows, guadagnoEuro])
   const overSofuThreshold = totalCents > SOFU_PLATFORM_FEE_THRESHOLD_CENTS
 
   const includeSofuLineInGross = useMemo((): boolean => {
@@ -174,11 +178,19 @@ export default function CampaignFormPage(): ReactElement {
           const standard = [7, 14, 30, 60, 90]
           setDurationPreset(standard.includes(days) ? String(days) : null)
         }
+        const loadedItems = c.cost_items ?? []
+        const editableLoaded = loadedItems.filter((it) => !isGuadagnoCostLabel(it.label))
+        const guadagnoLoaded = loadedItems.find((it) => isGuadagnoCostLabel(it.label))
         setCostRows(
-          (c.cost_items ?? []).map((it) => ({
-            label: it.label,
-            amountEuro: formatCentsAsEuroField(it.amount_cents),
-          })),
+          editableLoaded.length > 0
+            ? editableLoaded.map((it) => ({
+                label: it.label,
+                amountEuro: formatCentsAsEuroField(it.amount_cents),
+              }))
+            : [{ label: 'Materiali', amountEuro: '0' }],
+        )
+        setGuadagnoEuro(
+          guadagnoLoaded ? formatCentsAsEuroField(guadagnoLoaded.amount_cents) : '0',
         )
         const loadedSub =
           c.cost_subtotal_cents ??
@@ -268,17 +280,23 @@ export default function CampaignFormPage(): ReactElement {
       return
     }
 
-    const cost_items = costRows
+    const editableItems = costRows
       .map((row) => ({
         label: row.label.trim(),
         amount_cents: parseEuroInputToCents(row.amountEuro) ?? 0,
       }))
       .filter((row) => row.label.length > 0 && row.amount_cents > 0)
 
-    if (cost_items.length === 0) {
-      setError('Aggiungi almeno una voce di costo con etichetta e importo in euro.')
+    if (editableItems.length === 0) {
+      setError('Aggiungi almeno una voce di costo (oltre a Guadagno) con etichetta e importo in euro.')
       return
     }
+
+    const guadagnoCents = Math.max(0, parseEuroInputToCents(guadagnoEuro) ?? 0)
+    const cost_items = [
+      ...editableItems,
+      { label: GUADAGNO_COST_LABEL, amount_cents: guadagnoCents },
+    ]
 
     const v = videoUrl.trim()
     const hasVideo = v.length > 0
@@ -579,6 +597,25 @@ export default function CampaignFormPage(): ReactElement {
             <Button type="button" variant="light" onClick={addCostRow}>
               Aggiungi voce
             </Button>
+            <Group align="flex-end" wrap="wrap" gap="sm" mt="xs">
+              <TextInput
+                label="Voce fissa"
+                value={GUADAGNO_COST_LABEL}
+                readOnly
+                disabled
+                description="Ultima riga dell’elenco: quanto ti tieni in caso di successo (puoi indicare 0 €)."
+                style={{ flex: '1 1 200px' }}
+                radius="md"
+              />
+              <TextInput
+                label="Importo (€)"
+                placeholder="0,00"
+                value={guadagnoEuro}
+                onChange={(e) => setGuadagnoEuro(e.target.value)}
+                style={{ flex: '0 1 140px' }}
+                radius="md"
+              />
+            </Group>
           </Stack>
 
           <Stack gap="xs" p="md" style={{ background: '#f8f9fa', borderRadius: 8 }}>
@@ -663,7 +700,7 @@ export default function CampaignFormPage(): ReactElement {
                 radius="md"
               />
               <TextInput
-                label="Valore massimo Drop — offerta di partenza di ogni quota (€)"
+                label="Growing Drop — offerta di partenza di ogni quota (€)"
                 description="Dopo il Bloom definito e la quantità di drop, questo valore è l’offerta d’ingresso che la gente vede."
                 value={maxDropEuro}
                 onChange={(e) => onMaxDropEuroChange(e.target.value)}
@@ -696,7 +733,7 @@ export default function CampaignFormPage(): ReactElement {
               radius="md"
             />
             <TextInput
-              label="Valore minimo Drop — offerta finale limite (€)"
+              label="Valore limite Blooming Drop (€)"
               description="Calcolato automaticamente: obiettivo lordo (parziale + commissioni) ÷ tetto blooming drops. Non modificabile."
               value={m > 0 && grossPoolCents > 0 ? formatCentsAsEuroField(minDropCents) : '—'}
               disabled

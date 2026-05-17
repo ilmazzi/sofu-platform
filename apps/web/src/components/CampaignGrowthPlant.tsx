@@ -1,6 +1,10 @@
 import type { ReactElement } from 'react'
 import { Box, Group, Image, Stack, Text } from '@mantine/core'
-import { growthStageFromSupporterPercent } from '../lib/campaignGrowthStages'
+import { CAMPAIGN_GROWTH_STAGES, growthStageFromSupporterPercent } from '../lib/campaignGrowthStages'
+
+const FIORITURA_TITLE = 'La comunità aumenta e diminuisce la spesa!'
+const FIORITURA_CAPTION =
+  'Il tuo seme è cresciuto fino alla fioritura! Hai trovato tutte le persone che ti servivano per realizzarlo, d’ora in avanti, chiunque ti sostenga, permetterà alle altre persone di sostenere una spesa minore!'
 
 type Variant = 'compact' | 'featured' | 'creatorSeed'
 
@@ -8,14 +12,19 @@ export function CampaignGrowthPlant({
   progressPercent,
   variant = 'compact',
   projectLabel = 'progetto',
+  inFioritura = false,
 }: {
   /** Percentuale avanzamento obiettivo persone (0–100). */
   progressPercent: number
   variant?: Variant
   /** Sostituto per "progetto" nel testo accessibile. */
   projectLabel?: string
+  /** Campagna in fase blooming (post-Bloom): copy e immagine di fioritura. */
+  inFioritura?: boolean
 }): ReactElement {
-  const stage = growthStageFromSupporterPercent(progressPercent)
+  const stage = inFioritura
+    ? CAMPAIGN_GROWTH_STAGES[4]!
+    : growthStageFromSupporterPercent(progressPercent)
   const rounded = Math.round(Math.min(100, Math.max(0, progressPercent)))
 
   const imgH = variant === 'compact' ? 92 : variant === 'creatorSeed' ? 200 : 220
@@ -99,10 +108,12 @@ export function CampaignGrowthPlant({
             {stage.label}
           </Text>
           <Text size={variant === 'compact' ? 'sm' : 'lg'} fw={700} lh={1.3} style={{ letterSpacing: '-0.02em' }}>
-            La comunità fa crescere il {projectLabel}
+            {inFioritura ? FIORITURA_TITLE : `La comunità fa crescere il ${projectLabel}`}
           </Text>
           <Text size="xs" c="dimmed" lh={1.55}>
-            {rounded}% dell’obiettivo persone: più sostenitori entrano, più la piantina avanza verso la fioritura.
+            {inFioritura
+              ? FIORITURA_CAPTION
+              : `${rounded}% dell’obiettivo persone: più sostenitori entrano, più la piantina avanza verso la fioritura.`}
           </Text>
         </Stack>
       </Group>

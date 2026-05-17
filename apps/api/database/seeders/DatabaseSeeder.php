@@ -86,6 +86,7 @@ class DatabaseSeeder extends Seeder
         $draft->costItems()->createMany([
             ['label' => 'Materiali', 'amount_cents' => 250_000, 'sort_order' => 0],
             ['label' => 'Logistica', 'amount_cents' => 150_000, 'sort_order' => 1],
+            ['label' => 'Guadagno', 'amount_cents' => 50_000, 'sort_order' => 2],
         ]);
 
         $published = Campaign::query()->updateOrCreate(
@@ -115,6 +116,7 @@ class DatabaseSeeder extends Seeder
         $published->costItems()->delete();
         $published->costItems()->createMany([
             ['label' => 'Obiettivo', 'amount_cents' => 50_000, 'sort_order' => 0],
+            ['label' => 'Guadagno', 'amount_cents' => 0, 'sort_order' => 1],
         ]);
     }
 }

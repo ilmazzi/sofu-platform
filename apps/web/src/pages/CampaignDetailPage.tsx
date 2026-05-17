@@ -7,6 +7,7 @@ import {
   Button,
   FileInput,
   Grid,
+  NumberInput,
   Group,
   Progress,
   Skeleton,
@@ -31,6 +32,12 @@ import {
   reservationEligibleForPayment,
 } from '../lib/bloom'
 import { campaignCategoryLabel, campaignStatusBadgeColor, campaignStatusLabel } from '../lib/campaignLabels'
+import {
+  hasTransparentZeroProfit,
+  isGuadagnoCostLabel,
+  ZERO_PROFIT_BADGE,
+  ZERO_PROFIT_DETAIL_HINT,
+} from '../lib/campaignCosts'
 import { formatEuro, supporterProgressPercent } from '../lib/campaignMetrics'
 
 type Campaign = components['schemas']['Campaign']
@@ -57,6 +64,8 @@ export default function CampaignDetailPage(): ReactElement {
   const [reloadTick, setReloadTick] = useState(0)
   const [reserveMsg, setReserveMsg] = useState<string | null>(null)
   const [reservePending, setReservePending] = useState(false)
+  const [pledgePanelOpen, setPledgePanelOpen] = useState(false)
+  const [pledgeDropCount, setPledgeDropCount] = useState<number | string>(1)
   const [lastReservation, setLastReservation] = useState<Reservation | null>(null)
   const [payment, setPayment] = useState<Payment | 'pending' | null>(null)
   const [paymentMsg, setPaymentMsg] = useState<string | null>(null)
@@ -324,6 +333,7 @@ export default function CampaignDetailPage(): ReactElement {
   async function onReserve(e: FormEvent): Promise<void> {
     e.preventDefault()
     if (!slug || !user || !canReserve) return
+    const drops = Math.max(1, Math.min(10_000, Math.floor(Number(pledgeDropCount) || 1)))
     setReserveMsg(null)
     setPayment(null)
     setPaymentMsg(null)
@@ -333,7 +343,7 @@ export default function CampaignDetailPage(): ReactElement {
       const res = await apiFetch(`/api/v1/campaigns/${encodeURIComponent(slug)}/reservations`, {
         method: 'POST',
         headers: { 'Idempotency-Key': idempotencyKey },
-        json: { idempotency_key: idempotencyKey },
+        json: { idempotency_key: idempotencyKey, drop_count: drops },
       })
       const body = await res.json().catch(() => null)
       if (res.status === 401) {
@@ -358,8 +368,11 @@ export default function CampaignDetailPage(): ReactElement {
       }
       const json = body as ReservationWrapped
       setLastReservation(json.data)
+      setPledgePanelOpen(false)
+      const n = json.data.drop_count ?? drops
+      const dropLabel = n === 1 ? '1 drop' : `${n} drop`
       setReserveMsg(
-        `Drop inserita nell’annaffiatoio. Quota di riferimento: ${formatEuro(json.data.effective_price_cents, campaign?.currency ?? 'EUR')}. Nessun addebito immediato: fino al Bloom il valore della tua quota resta questo; l’incasso avviene solo quando le regole della campagna lo consentono (non al solo clic).`,
+        `${dropLabel} inserite nell’annaffiatoio. Impegno totale: ${formatEuro(json.data.effective_price_cents, campaign?.currency ?? 'EUR')}. Nessun addebito immediato: fino al Bloom il valore resta quello dell’offerta con cui entri; l’incasso avviene solo quando le regole della campagna lo consentono (non al solo clic).`,
       )
       setReloadTick((t) => t + 1)
     } catch {
@@ -482,6 +495,7 @@ export default function CampaignDetailPage(): ReactElement {
   const s = encodeURIComponent(campaign.slug)
   const cat = campaignCategoryLabel(campaign.category)
   const costRows = [...(campaign.cost_items ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+  const transparentZeroProfit = hasTransparentZeroProfit(campaign.cost_items)
   const reserveOk = reserveMsg?.includes('annaffiatoio') ?? false
   const bloomed = campaignHasReachedBloom(campaign)
   const bloomPct = campaignBloomProgressPercent(campaign)
@@ -583,6 +597,7 @@ export default function CampaignDetailPage(): ReactElement {
               progressPercent={supporterProgressPercent(campaign)}
               variant={ownerPreview ? 'creatorSeed' : 'featured'}
               projectLabel="progetto"
+              inFioritura={bloomed}
             />
 
             {/* Descrizione */}
@@ -603,6 +618,13 @@ export default function CampaignDetailPage(): ReactElement {
                 <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.12em' }} mb="sm">
                   Voci di costo
                 </Text>
+                {transparentZeroProfit ? (
+                  <Alert color="teal" variant="light" mb="sm" title={ZERO_PROFIT_BADGE}>
+                    <Text size="sm" lh={1.55}>
+                      {ZERO_PROFIT_DETAIL_HINT}
+                    </Text>
+                  </Alert>
+                ) : null}
                 <Table
                   striped
                   highlightOnHover
@@ -627,15 +649,60 @@ export default function CampaignDetailPage(): ReactElement {
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {costRows.map((row) => (
-                      <Table.Tr key={row.id}>
-                        <Table.Td style={{ fontWeight: 500 }}>{row.label}</Table.Td>
-                        <Table.Td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                          {formatEuro(row.amount_cents, campaign.currency)}
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
+                    {costRows.map((row) => {
+                      const zeroGuadagno =
+                        isGuadagnoCostLabel(row.label) && row.amount_cents === 0
+                      return (
+                        <Table.Tr
+                          key={row.id}
+                          style={
+                            zeroGuadagno
+                              ? {
+                                  backgroundColor: '#e6f7f3',
+                                  boxShadow: 'inset 3px 0 0 #0d6b5c',
+                                }
+                              : undefined
+                          }
+                        >
+                          <Table.Td style={{ fontWeight: zeroGuadagno ? 700 : 500 }}>
+                            <Group gap="xs" wrap="nowrap">
+                              <span>{row.label}</span>
+                              {zeroGuadagno ? (
+                                <Badge size="xs" color="teal" variant="filled">
+                                  Trasparenza
+                                </Badge>
+                              ) : null}
+                            </Group>
+                          </Table.Td>
+                          <Table.Td
+                            style={{
+                              textAlign: 'right',
+                              fontVariantNumeric: 'tabular-nums',
+                              fontWeight: zeroGuadagno ? 800 : 600,
+                              color: zeroGuadagno ? '#0d6b5c' : undefined,
+                            }}
+                          >
+                            {formatEuro(row.amount_cents, campaign.currency)}
+                          </Table.Td>
+                        </Table.Tr>
+                      )
+                    })}
                   </Table.Tbody>
+                  <Table.Tfoot>
+                    <Table.Tr>
+                      <Table.Td style={{ fontWeight: 700, borderTop: '2px solid #dee2e6' }}>Totale</Table.Td>
+                      <Table.Td
+                        style={{
+                          textAlign: 'right',
+                          fontVariantNumeric: 'tabular-nums',
+                          fontWeight: 700,
+                          borderTop: '2px solid #dee2e6',
+                        }}
+                      >
+                        {formatEuro(costSubtotalCentsForWaiver, campaign.currency)}
+                      </Table.Td>
+                    </Table.Tr>
+                  </Table.Tfoot>
                 </Table>
               </Box>
             ) : null}
@@ -698,14 +765,17 @@ export default function CampaignDetailPage(): ReactElement {
                   <Stack gap="md">
                     {canReserve ? (
                       showAddDroplet ? (
-                        <form onSubmit={(e) => void onReserve(e)}>
-                          <Stack gap="sm">
+                        <Stack gap="sm">
+                          {!pledgePanelOpen ? (
                             <Button
-                              type="submit"
-                              loading={reservePending}
+                              type="button"
                               color="dark"
                               size="md"
                               fullWidth
+                              onClick={() => {
+                                setPledgePanelOpen(true)
+                                setReserveMsg(null)
+                              }}
                               style={{
                                 fontWeight: 600,
                                 letterSpacing: '0.02em',
@@ -713,15 +783,72 @@ export default function CampaignDetailPage(): ReactElement {
                                 fontSize: '0.75rem',
                               }}
                             >
-                              💧 Aggiungi droplet
+                              💧 Sostieni questa campagna
                             </Button>
-                            {reserveMsg ? (
-                              <Alert color={reserveOk ? 'teal' : 'red'} variant="light" p="sm">
-                                <Text size="xs">{reserveMsg}</Text>
-                              </Alert>
-                            ) : null}
-                          </Stack>
-                        </form>
+                          ) : (
+                            <form onSubmit={(e) => void onReserve(e)}>
+                              <Stack
+                                gap="sm"
+                                p="md"
+                                style={{
+                                  border: '1px solid #dee2e6',
+                                  backgroundColor: '#f8f9fa',
+                                }}
+                              >
+                                <div>
+                                  <Text size="sm" fw={700} lh={1.35}>
+                                    Quante drop prometti di versare?
+                                  </Text>
+                                  <Text size="xs" c="dimmed" mt={4} lh={1.5}>
+                                    Se credi in questa campagna, offri di versare più quote.
+                                  </Text>
+                                </div>
+                                <NumberInput
+                                  label="Numero di drop"
+                                  description={
+                                    campaign
+                                      ? `Prezzo indicativo per una drop ora: ${formatEuro(campaign.current_price_cents, campaign.currency)}`
+                                      : undefined
+                                  }
+                                  min={1}
+                                  max={10_000}
+                                  allowDecimal={false}
+                                  value={pledgeDropCount}
+                                  onChange={setPledgeDropCount}
+                                  size="md"
+                                />
+                                <Group gap="xs" grow>
+                                  <Button
+                                    type="button"
+                                    variant="default"
+                                    onClick={() => setPledgePanelOpen(false)}
+                                    disabled={reservePending}
+                                  >
+                                    Annulla
+                                  </Button>
+                                  <Button
+                                    type="submit"
+                                    loading={reservePending}
+                                    color="dark"
+                                    style={{
+                                      fontWeight: 600,
+                                      letterSpacing: '0.02em',
+                                      textTransform: 'uppercase',
+                                      fontSize: '0.75rem',
+                                    }}
+                                  >
+                                    Conferma impegno
+                                  </Button>
+                                </Group>
+                              </Stack>
+                            </form>
+                          )}
+                          {reserveMsg ? (
+                            <Alert color={reserveOk ? 'teal' : 'red'} variant="light" p="sm">
+                              <Text size="xs">{reserveMsg}</Text>
+                            </Alert>
+                          ) : null}
+                        </Stack>
                       ) : null
                     ) : (
                       <Text size="sm" c="dimmed" fw={400}>
@@ -736,6 +863,9 @@ export default function CampaignDetailPage(): ReactElement {
                         </Text>
                         <Text size="xs" c="dimmed" mb="sm">
                           #{effectiveReservation.id}
+                          {(effectiveReservation.drop_count ?? 1) > 1
+                            ? ` · ${effectiveReservation.drop_count} drop promesse`
+                            : null}
                         </Text>
                         {effectiveReservation.status === 'converted_to_payment' ? (
                           <Alert color="teal" variant="light" p="sm" title="In bloom!">

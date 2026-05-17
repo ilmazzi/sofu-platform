@@ -3,6 +3,7 @@
 namespace App\Modules\Campaigns\Infrastructure\Eloquent;
 
 use App\Models\User;
+use App\Modules\Campaigns\Domain\BloomSupportersThreshold;
 use App\Modules\Campaigns\Domain\Enums\CampaignStatus;
 use App\Modules\Campaigns\Domain\Enums\SofuFeeWaiverState;
 use App\Modules\Campaigns\Domain\SofuPlatformFee;
@@ -110,16 +111,40 @@ class Campaign extends Model
     }
 
     /**
-     * Bloom: obiettivo sostenitori raggiunto, oppure campagna conclusa con successo.
-     * Il contributo monetario si abilita solo da questo punto (promessa → pagamento).
+     * Cuscinetto incassi: decimale da config (es. 0.10 = 10%). Vedi `config/sofu.php`.
      */
-    public function hasReachedBloom(): bool
+    public function paymentAttritionBuffer(): float
+    {
+        return (float) config('sofu.payment_attrition_buffer', 0.10);
+    }
+
+    /**
+     * Soglia numerica operativa per il Bloom: target + margine (documentazione prodotto §2.3).
+     */
+    public function bloomSupportersThreshold(): int
+    {
+        return BloomSupportersThreshold::count($this->target_supporters, $this->paymentAttritionBuffer());
+    }
+
+    /**
+     * Solo conteggio vs soglia (senza eccezioni di stato). Usato alla valutazione *funded* / *not funded*.
+     */
+    public function meetsBloomThresholdForFunding(): bool
     {
         if ($this->target_supporters <= 0) {
             return false;
         }
 
-        if ($this->active_reservations_count >= $this->target_supporters) {
+        return $this->active_reservations_count >= $this->bloomSupportersThreshold();
+    }
+
+    /**
+     * Bloom: soglia con cuscinetto raggiunta, oppure campagna già marcata conclusa con successo.
+     * Il contributo monetario si abilita solo da questo punto (promessa → pagamento).
+     */
+    public function hasReachedBloom(): bool
+    {
+        if ($this->meetsBloomThresholdForFunding()) {
             return true;
         }
 

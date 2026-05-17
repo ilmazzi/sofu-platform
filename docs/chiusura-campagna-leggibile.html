@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chiusura campagna Sofu — guida essenziale</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --muted: #555;
+      --bg: #faf8f5;
+      --card: #fff;
+      --ok: #0d6b3d;
+      --no: #8b2942;
+      --branch: #1e4d7a;
+      --line: #c9c2b8;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 1.125rem;
+      line-height: 1.65;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    .wrap {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+    }
+    @media (min-width: 600px) {
+      .wrap { padding: 2.5rem 1.5rem 4rem; }
+      body { font-size: 1.2rem; }
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1.25;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0 0 1.5rem;
+    }
+    .pdf-hint {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0.9rem 1rem;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .pdf-hint strong { color: var(--ink); }
+    h2 {
+      font-size: 1.25rem;
+      margin: 2.25rem 0 1rem;
+      font-weight: 650;
+    }
+    p { margin: 0 0 1rem; }
+    ul {
+      margin: 0 0 1rem;
+      padding-left: 1.2rem;
+    }
+    li { margin-bottom: 0.45rem; }
+
+    /* Diagram */
+    .diagram {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.25rem 1rem 1.5rem;
+      margin: 1.25rem 0 2rem;
+    }
+    .diagram-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .flow-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .box {
+      background: #f3f0ea;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      text-align: center;
+      max-width: 100%;
+      font-size: 0.98rem;
+    }
+    .box small {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .arrow {
+      color: var(--line);
+      font-size: 1.4rem;
+      line-height: 1.2;
+      padding: 0.15rem 0;
+    }
+    .diamond {
+      background: #e8f0f8;
+      border: 2px solid var(--branch);
+      color: var(--branch);
+      font-weight: 600;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 100%;
+    }
+    .split {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    @media (min-width: 520px) {
+      .split {
+        flex-direction: row;
+        align-items: stretch;
+        justify-content: center;
+        gap: 1rem;
+      }
+    }
+    .branch {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+    .label.no { color: var(--no); }
+    .label.yes { color: var(--ok); }
+    .outcome {
+      border-width: 2px;
+      font-weight: 600;
+    }
+    .outcome.bad {
+      background: #fce8ed;
+      border-color: #e0a4b3;
+      color: #5c1a2e;
+    }
+    .outcome.good {
+      background: #e6f5ec;
+      border-color: #8cc9a4;
+      color: #0d4a2a;
+    }
+    .note {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--line);
+    }
+
+    /* Payment mini-flow */
+    .mini-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem 0.5rem;
+      margin: 0.35rem 0;
+      font-size: 0.95rem;
+    }
+    .pill {
+      background: #eef6ff;
+      border: 1px solid #b8d4f0;
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+    }
+
+    .callout {
+      background: var(--card);
+      border-left: 4px solid var(--branch);
+      padding: 1rem 1.1rem;
+      margin: 1.5rem 0;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .callout h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.05rem;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--line);
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    a { color: var(--branch); }
+
+    @media print {
+      body { background: #fff; font-size: 11pt; }
+      .pdf-hint { border-style: dashed; }
+      .diagram { break-inside: avoid; }
+      h2 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Chiusura di una campagna su Sofu</h1>
+    <p class="lede">Versione essenziale: cosa succede alla fine della raccolta e dopo, incluso quando un pagamento non passa.</p>
+
+    <div class="pdf-hint">
+      <strong>Salvare come PDF:</strong> apri questo file con Chrome o Edge → menu <strong>Stampa</strong> → <strong>Salva come PDF</strong> (oppure “Microsoft Print to PDF”). Controlla anteprima prima di salvare.
+    </div>
+
+    <div class="callout">
+      <h3>Tre cose da ricordare</h3>
+      <ul style="margin-bottom:0">
+        <li>Fino alla <strong>fine ufficiale</strong> nessuno viene addebitato: si raccolgono solo <strong>impegni</strong> con carta/conto valido.</li>
+        <li>La fine è la <strong>fine del giorno</strong> nel luogo del creator (con secondi precisi). Conta quando il <strong>sistema</strong> registra l’adesione, non il “click” se la rete è lenta.</li>
+        <li><strong>Finanziata</strong> e <strong>pagamento riuscito</strong> sono due passi: prima si chiude la campagna, poi si tenta l’incasso su ogni persona.</li>
+      </ul>
+    </div>
+
+    <h2>1. Il disegno principale (una sola verifica)</h2>
+    <p>Alla scadenza il sistema fa un controllo <strong>una tantum</strong>. Il margine extra sull’obiettivo (“cuscinetto”) serve perché, dopo, qualche pagamento salterà sempre: così l’obiettivo economico reale resta vicino a quello previsto.</p>
+
+    <div class="diagram" aria-label="Diagramma chiusura campagna">
+      <div class="diagram-title">Dalla raccolta all’esito</div>
+      <div class="flow-col">
+        <div class="box">Raccolta impegni<br><small>Carta valida, nessun addebito ancora</small></div>
+        <div class="arrow">↓</div>
+        <div class="box">Fine del giorno nel luogo del creator<br><small>23:59:59 · fuso orario del creator</small></div>
+        <div class="arrow">↓</div>
+        <div class="diamond">Abbastanza adesioni valide,<br>con obiettivo + margine?</div>
+        <div class="arrow">↓</div>
+        <div class="split">
+          <div class="branch">
+            <div class="label no">No</div>
+            <div class="box outcome bad">Non finanziata</div>
+            <div class="arrow">↓</div>
+            <div class="box"><strong>Nessun addebito</strong> per questa chiusura</div>
+          </div>
+          <div class="branch">
+            <div class="label yes">Sì</div>
+            <div class="box outcome good">Finanziata</div>
+            <div class="arrow">↓</div>
+            <div class="box">Si passa ai <strong>tentativi di pagamento</strong><br><small>vedi sezione 2</small></div>
+          </div>
+        </div>
+        <p class="note">Se qualcuno annulla <strong>prima</strong> della fine e la soglia non c’è più: alla verifica risulta <strong>non finanziata</strong>. Non basta aver raggiunto l’obiettivo “un giorno fa”.</p>
+      </div>
+    </div>
+
+    <h2>2. Dopo “finanziata”: cosa succede a ogni pagamento</h2>
+    <p>La campagna è stata giudicata finanziata: questo <strong>non si annulla</strong> solo perché una carta rifiuta. Per ogni sostenitore si segue un percorso di recupero.</p>
+
+    <div class="diagram" aria-label="Diagramma pagamenti dopo finanziata">
+      <div class="diagram-title">Un singolo sostenitore</div>
+      <div class="flow-col">
+        <div class="box">Tentativo di addebito<br><small>Prezzo di campagna al momento dell’incasso, uguale per tutti in quel blocco</small></div>
+        <div class="arrow">↓</div>
+        <div class="diamond">Il pagamento passa?</div>
+        <div class="split">
+          <div class="branch">
+            <div class="label yes">Sì</div>
+            <div class="box outcome good">Pagato</div>
+          </div>
+          <div class="branch">
+            <div class="label no">No</div>
+            <div class="box">Solleciti automatici<br><small>mail, notifiche, nuovi tentativi consentiti dal sistema</small></div>
+            <div class="arrow">↓</div>
+            <div class="box">Serve ancora aiuto?<br><small>Contatto diretto (persona) per carta nuova, dubbi, ecc.</small></div>
+            <div class="arrow">↓</div>
+            <div class="box outcome good" style="margin-bottom:0.35rem;">Risolto → Pagato</div>
+            <div class="mini-row"><span style="color:var(--muted)">oppure</span></div>
+            <div class="box outcome bad" style="margin-top:0">Dopo tutti i tentativi: fallito<br><small>il creator viene informato; le regole “difficili” (troppi insoluti insieme) sono definite in fase operativa</small></div>
+          </div>
+        </div>
+        <p class="note">Il margine sull’obiettivo serve quando i problemi sono “pochi rispetto al previsto”. Se i mancati pagamenti fossero molti, si gestisce con policy dedicate — senza ribaltare da soli l’esito “finanziata” della campagna.</p>
+      </div>
+    </div>
+
+    <h2>3. Altri casi, in breve</h2>
+    <ul>
+      <li><strong>Senza carta valida:</strong> quell’adesione non conta per la verifica. Convincere a completare il metodo <strong>prima della fine</strong>.</li>
+      <li><strong>Adesione registrata dopo la fine:</strong> non entra in questo giro.</li>
+      <li><strong>Spostare la data di fine:</strong> possibile dal team <strong>prima</strong> della prima chiusura ufficiale. Dopo la prima chiusura non si “corregge” solo spostando la data; per riprovare serve un <strong>nuovo ciclo</strong> (nuova fine, nuova verifica).</li>
+      <li><strong>Secondo tentativo dopo una non finanziata:</strong> nuovo ciclo; chi c’era prima deve dire di sì di nuovo; regole di prezzo come nel primo modello.</li>
+    </ul>
+
+    <h2>4. Elenco completo dei codici (per team e FAQ)</h2>
+    <p style="color:var(--muted);font-size:0.98rem">Tutte le casistiche in tabella (A1…F2) sono nel file <strong>chiusura-campagna-appendice-casistiche.md</strong> nel repository — qui abbiamo tenuto solo il filo logico per chi legge.</p>
+
+    <footer>
+      Documento di supporto al modello descritto in <code>campaign-funding-and-deadline.md</code>. Aggiornare entrambi se cambiano le regole di prodotto.
+    </footer>
+  </div>
+</body>
+</html>

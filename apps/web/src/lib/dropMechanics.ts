@@ -5,6 +5,11 @@ type Campaign = components['schemas']['Campaign']
 
 /** Testi esplicativi allineati al modello: impegno ≠ prelievo immediato; prezzo stabile fino al Bloom; calo post-Bloom fino a Full bloom / chiusura. */
 
+/** Etichette quota: growing (seme → Bloom) vs blooming (dopo Bloom). */
+export const LABEL_GROWING_DROP = 'Growing Drop'
+export const LABEL_BLOOMING_DROP_CURRENT = 'Valore attuale Blooming Drop'
+export const LABEL_BLOOMING_DROP_LIMIT = 'Valore limite Blooming Drop'
+
 export const DROP_NO_IMMEDIATE_CHARGE =
   'Partecipare non significa che l’importo lasci subito il tuo conto: è un impegno sull’offerta (la tua Drop). L’addebito avviene solo quando la campagna e le regole di pagamento lo prevedono — non al solo clic di adesione.'
 
@@ -20,8 +25,8 @@ export function dropMaxDecreaseCaption(c: Campaign): string {
       ? `Se tutte le blooming drops previste al tetto fioritura (${cap} posti) vengono riempite, `
       : 'Se la campagna raggiunge la fioritura completa, '
   return (
-    `${capBit}ogni Drop può scendere al massimo da ${max} a ${min}. ` +
-    'Growing / blooming = quante adesioni (posti); “valore della Drop” = quanto euro per quella quota. ' +
+    `${capBit}ogni Blooming Drop può scendere al massimo da ${max} (${LABEL_GROWING_DROP}) a ${min} (${LABEL_BLOOMING_DROP_LIMIT}). ` +
+    'Growing / blooming = quante adesioni (posti); l’euro accanto è quanto costa una quota in quel momento. ' +
     'La differenza tra offerta iniziale e offerta finale è lo spazio delle droplet: come le gestisce il creator (beneficenza, SoFu, trattenuta) lo chiariremo in piattaforma.'
   )
 }

@@ -7,7 +7,22 @@ $simulationEnabled = $hasExplicitSimulation
     ? filter_var($rawSimulation, FILTER_VALIDATE_BOOL)
     : ! in_array((string) env('APP_ENV', 'production'), ['production'], true);
 
+$rawBuffer = env('SOFU_PAYMENT_ATTRITION_BUFFER', '0.10');
+$paymentAttritionBuffer = is_numeric($rawBuffer) ? (float) $rawBuffer : 0.10;
+$paymentAttritionBuffer = max(0.0, min(0.5, $paymentAttritionBuffer));
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cuscinetto incassi (Bloom / goal)
+    |--------------------------------------------------------------------------
+    |
+    | Percentuale aggiuntiva oltre target_supporters (decimale: 0.10 = 10%).
+    | Allineato a docs/campaign-funding-and-deadline.md §2.3. Override tipico 7%–15%.
+    |
+    */
+    'payment_attrition_buffer' => $paymentAttritionBuffer,
 
     /*
     |--------------------------------------------------------------------------

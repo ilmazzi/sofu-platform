@@ -187,6 +187,9 @@ class LedgerTest extends TestCase
 
         $reservation = Reservation::query()->where('supporter_id', $supporter->id)->firstOrFail();
 
+        $campaign->refresh();
+        $this->reserveUntilBloom($campaign);
+
         $this
             ->actingAs($supporter)
             ->postJson("/api/v1/reservations/{$reservation->id}/payment-intent")

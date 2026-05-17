@@ -37,6 +37,7 @@ class BackofficeCampaignResource extends JsonResource
             'sofu_fee_waiver_state' => $this->sofu_fee_waiver_state->value,
             'sofu_fee_waiver_review_note' => $this->sofu_fee_waiver_review_note,
             'target_supporters' => $this->target_supporters,
+            'bloom_supporters_threshold' => $this->bloomSupportersThreshold(),
             'active_reservations_count' => $this->active_reservations_count,
             'min_price_cents' => $this->min_price_cents,
             'max_price_cents' => $this->max_price_cents,

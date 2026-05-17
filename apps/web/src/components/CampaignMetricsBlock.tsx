@@ -7,6 +7,9 @@ import {
   DROP_NO_IMMEDIATE_CHARGE,
   DROP_QUOTE_VS_VALUE_HINT,
   DROP_STABLE_UNTIL_BLOOM,
+  LABEL_BLOOMING_DROP_CURRENT,
+  LABEL_BLOOMING_DROP_LIMIT,
+  LABEL_GROWING_DROP,
   dropMaxDecreaseCaption,
 } from '../lib/dropMechanics'
 import { formatEuro } from '../lib/campaignMetrics'
@@ -60,7 +63,7 @@ export function CampaignMetricsBlock({
         <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="md" verticalSpacing="md" mt="md">
           <div>
             <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
-              Valore massimo Drop
+              {LABEL_GROWING_DROP}
             </Text>
             <Text size={compact ? 'md' : 'lg'} fw={700} lh={1.2} mt={4} style={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatEuro(c.max_price_cents, c.currency)}
@@ -68,7 +71,7 @@ export function CampaignMetricsBlock({
           </div>
           <div>
             <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
-              Valore minimo Drop
+              {LABEL_BLOOMING_DROP_LIMIT}
             </Text>
             <Text size={compact ? 'md' : 'lg'} fw={700} lh={1.2} mt={4} style={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatEuro(c.min_price_cents, c.currency)}
@@ -105,32 +108,36 @@ export function CampaignMetricsBlock({
       </div>
 
       <Divider label="Quota" labelPosition="left" mt="md" />
-      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xs" verticalSpacing="xs" mt="md">
+      <SimpleGrid cols={{ base: 1, sm: bloomed ? 3 : 2 }} spacing="xs" verticalSpacing="xs" mt="md">
         <div>
           <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
-            Valore massimo Drop
+            {LABEL_GROWING_DROP}
           </Text>
           <Text size="sm" fw={700} lh={1.2} style={{ fontVariantNumeric: 'tabular-nums' }}>
             {formatEuro(c.max_price_cents, c.currency)}
           </Text>
           <Text size="xs" c="dimmed" lh={1.2}>
-            offerta di partenza
+            {bloomed
+              ? 'offerta di partenza (fase growing)'
+              : 'offerta di partenza — fino al Bloom non scende'}
           </Text>
         </div>
+        {bloomed ? (
+          <div>
+            <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
+              {LABEL_BLOOMING_DROP_CURRENT}
+            </Text>
+            <Text size="sm" fw={800} lh={1.2} c="orange.8" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {formatEuro(c.current_price_cents, c.currency)}
+            </Text>
+            <Text size="xs" c="dimmed" lh={1.45}>
+              Può scendere verso il limite man mano che entrano blooming drops (dettaglio sotto).
+            </Text>
+          </div>
+        ) : null}
         <div>
           <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
-            Valore attuale
-          </Text>
-          <Text size="sm" fw={800} lh={1.2} c="orange.8" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {formatEuro(c.current_price_cents, c.currency)}
-          </Text>
-          <Text size="xs" c="dimmed" lh={1.45}>
-            Fino al Bloom resta l’offerta con cui entri; dopo il Bloom può scendere verso il minimo (dettaglio nel riquadro sotto).
-          </Text>
-        </div>
-        <div>
-          <Text size="xs" tt="uppercase" fw={700} c="dimmed" style={{ letterSpacing: '0.06em' }}>
-            Valore minimo Drop
+            {LABEL_BLOOMING_DROP_LIMIT}
           </Text>
           <Text size="sm" fw={700} lh={1.2} style={{ fontVariantNumeric: 'tabular-nums' }}>
             {formatEuro(c.min_price_cents, c.currency)}

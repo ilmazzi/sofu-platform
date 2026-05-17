@@ -82,7 +82,13 @@ class TransitionCampaignStatusAction
                 CampaignStatus::Draft,
             ], true),
             CampaignStatus::Approved => $to === CampaignStatus::Published,
-            CampaignStatus::Published => in_array($to, [CampaignStatus::Activated, CampaignStatus::Cancelled, CampaignStatus::Expired], true),
+            CampaignStatus::Published => in_array($to, [
+                CampaignStatus::Activated,
+                CampaignStatus::Cancelled,
+                CampaignStatus::Expired,
+                CampaignStatus::Successful,
+                CampaignStatus::Failed,
+            ], true),
             CampaignStatus::Activated => in_array($to, [CampaignStatus::Successful, CampaignStatus::Closed, CampaignStatus::Cancelled, CampaignStatus::Failed], true),
             default => false,
         };
