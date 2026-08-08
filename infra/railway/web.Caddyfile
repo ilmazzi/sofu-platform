@@ -4,7 +4,6 @@
 	@api path /api/* /sanctum/* /up
 	handle @api {
 		reverse_proxy {$API_UPSTREAM} {
-			header_up Host {host}
 			header_up X-Forwarded-Host {host}
 			header_up X-Forwarded-Proto https
 		}
