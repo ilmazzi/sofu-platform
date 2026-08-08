@@ -1,12 +1,13 @@
 # Infrastructure
 
-Infrastructure files will live here.
+Infrastructure files live here.
 
-Planned structure:
+Structure:
 
 ```txt
 infra/
-  docker/   Local development services
+  docker/   Docker Compose production deploy for a VPS
+  railway/  Railway multi-service deploy
   deploy/   Production and staging deployment notes/configuration
 ```
 

@@ -1,0 +1,19 @@
+{
+	email {$CADDY_EMAIL:admin@example.com}
+}
+
+{$SOFU_DOMAIN:localhost} {
+	encode zstd gzip
+
+	@api path /api/* /sanctum/* /up
+	handle @api {
+		root * /var/www/html/public
+		php_fastcgi api:9000
+	}
+
+	handle {
+		root * /srv/www
+		try_files {path} /index.html
+		file_server
+	}
+}
