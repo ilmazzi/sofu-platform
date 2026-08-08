@@ -1,134 +1,428 @@
-# Railway deploy
+# Deploy Railway di Sofu
 
-Use one Railway project with these services:
+Questa guida e scritta per usare il **dashboard Railway**, non la CLI.
 
-- `web`: public entrypoint for the React SPA and same-origin proxy to Laravel.
-- `api`: Laravel HTTP API.
-- `worker`: Laravel queue worker.
-- `scheduler`: Laravel scheduler.
-- `Postgres`: Railway managed PostgreSQL.
-- `Redis`: Railway managed Redis.
+Segue la documentazione ufficiale Railway su:
 
-This keeps browser traffic on one public domain (`web`) while backend processes stay separate.
+- monorepo: progetto vuoto, servizi vuoti, poi collegamento al repo;
+- Laravel: app HTTP, worker e scheduler separati;
+- Dockerfile custom: variabile `RAILWAY_DOCKERFILE_PATH`;
+- variabili tra servizi: sintassi `${{nome-servizio.NOME_VARIABILE}}`.
 
-## 1. Create services
+## Risultato finale
 
-In Railway Dashboard:
+Dentro un solo progetto Railway creerai:
 
-1. Create a new project from the GitHub repository.
-2. Add a PostgreSQL service.
-3. Add a Redis service.
-4. Add four services from the same repo: `web`, `api`, `worker`, `scheduler`.
+```txt
+sofu-platform
+  Postgres    database
+  api         Laravel API
+  web         sito pubblico React + proxy /api verso api
+  worker      queue worker Laravel
+  scheduler   scheduler Laravel
+```
 
-For each app service, use these settings:
+Redis **non e obbligatorio per partire**.
 
-| Service | Dockerfile path | Public domain | Start command |
-| --- | --- | --- | --- |
-| `web` | `infra/railway/web.Dockerfile` | Yes | default |
-| `api` | `infra/railway/api.Dockerfile` | Optional | default |
-| `worker` | `infra/railway/api.Dockerfile` | No | `sofu-railway-run-worker` |
-| `scheduler` | `infra/railway/api.Dockerfile` | No | `sofu-railway-run-scheduler` |
-
-Set health checks:
-
-- `web`: `/`
-- `api`: `/api/v1/health`
-
-## 2. Variables
-
-Create shared variables where possible, then override service-specific values.
-
-### API, worker, scheduler
+Partiamo senza Redis, usando:
 
 ```env
+QUEUE_CONNECTION=database
+CACHE_STORE=database
+```
+
+Redis si potra aggiungere dopo, se nel tuo dashboard Railway lo trovi come template/database.
+
+## Prima di iniziare
+
+Railway deploya dal repository GitHub, quindi prima devi avere `main` pushato:
+
+```bash
+git push origin main
+```
+
+Se `main` non e pushato, Railway non vedra le ultime modifiche.
+
+## 1. Crea un progetto vuoto
+
+Nel dashboard Railway:
+
+1. Click su **New Project**.
+2. Scegli **Empty Project**.
+3. Chiamalo per esempio:
+
+```txt
+sofu-platform
+```
+
+Non partire da **Deploy from GitHub repo**.
+
+Per un monorepo, la doc Railway consiglia di creare prima il progetto/servizi vuoti e poi collegare ogni servizio al repo.
+
+## 2. Crea Postgres
+
+Nel project canvas:
+
+1. Click su **Create** o **New**.
+2. Cerca **Postgres** o **PostgreSQL**.
+3. Crea il servizio database.
+4. Rinominalo esattamente:
+
+```txt
+Postgres
+```
+
+Il nome e importante per usare questa variabile:
+
+```env
+${{Postgres.DATABASE_URL}}
+```
+
+## 3. Crea i servizi vuoti
+
+Nel project canvas crea quattro **Empty Service**:
+
+```txt
+api
+web
+worker
+scheduler
+```
+
+Devono essere servizi vuoti, non direttamente "Deploy from GitHub repo".
+
+Per ogni servizio:
+
+1. Apri il servizio.
+2. Vai in **Settings**.
+3. Sezione **Source**.
+4. Collega il repository GitHub `sofu-platform`.
+5. Branch: `main`.
+6. Root directory: lascia la root del repo.
+
+Non impostare root directory su `apps/api` o `apps/web`, perche i Dockerfile Railway stanno in:
+
+```txt
+infra/railway/
+```
+
+e hanno bisogno di vedere tutto il monorepo.
+
+## 4. Configura api
+
+Servizio Railway:
+
+```txt
+api
+```
+
+### Variables
+
+Nel servizio `api`, vai in **Variables** e inserisci:
+
+```env
+RAILWAY_DOCKERFILE_PATH=infra/railway/api.Dockerfile
+
 APP_NAME=Sofu
 APP_ENV=production
 APP_DEBUG=false
 APP_KEY=base64:CHANGE_ME
+
 APP_URL=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
 FRONTEND_URL=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
+
+LOG_CHANNEL=stderr
+LOG_LEVEL=info
 
 DB_CONNECTION=pgsql
 DB_URL=${{Postgres.DATABASE_URL}}
 DB_SSLMODE=require
 
-QUEUE_CONNECTION=redis
-CACHE_STORE=redis
-REDIS_CLIENT=phpredis
-REDIS_URL=${{Redis.REDIS_URL}}
-
+QUEUE_CONNECTION=database
+CACHE_STORE=database
 SESSION_DRIVER=file
-SESSION_DOMAIN=
+
 SANCTUM_STATEFUL_DOMAINS=${{web.RAILWAY_PUBLIC_DOMAIN}}
 CORS_ALLOWED_ORIGINS=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
 
-PAYMENT_PROVIDER=stripe
-STRIPE_SECRET=sk_live_CHANGE_ME
-STRIPE_WEBHOOK_SECRET=whsec_CHANGE_ME
-
+PAYMENT_PROVIDER=mock
 SIMULATION_ENABLED=false
 SOFU_PAYMENT_ATTRITION_BUFFER=0.10
 ```
 
-For staging/demo, set:
+### Networking
 
-```env
-PAYMENT_PROVIDER=mock
+Nel servizio `api`:
+
+1. Vai in **Settings**.
+2. Vai in **Networking**.
+3. Click su **Generate Domain**.
+
+Il dominio pubblico di `api` serve a farlo raggiungere dal servizio `web`.
+
+L'utente finale non deve usare questo dominio.
+
+### Healthcheck
+
+Se Railway ti chiede un healthcheck path, usa:
+
+```txt
+/api/v1/health
 ```
 
-### Web
+## 5. Configura web
 
-Keep `VITE_API_URL` empty so the SPA calls `/api/...` on the same Railway domain and Caddy proxies requests to Laravel.
+Servizio Railway:
+
+```txt
+web
+```
+
+Questo e l'unico dominio che aprirai nel browser.
+
+### Variables
+
+Nel servizio `web`, vai in **Variables** e inserisci:
 
 ```env
+RAILWAY_DOCKERFILE_PATH=infra/railway/web.Dockerfile
+
 VITE_API_URL=
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_CHANGE_ME
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_CHANGE_ME
+
 API_UPSTREAM=https://${{api.RAILWAY_PUBLIC_DOMAIN}}
 ```
 
-If you disable the public domain on `api`, replace `API_UPSTREAM` with the private Railway URL for the API service.
+Importante:
 
-## 3. First deploy
+- `VITE_API_URL` deve restare vuota.
+- Il browser chiamera `/api/...` sul dominio `web`.
+- Caddy dentro `web` inoltrera `/api/...` al servizio `api`.
 
-Deploy order:
+### Networking
 
-1. `Postgres`
-2. `Redis`
-3. `api`
-4. `worker`
-5. `scheduler`
-6. `web`
+Nel servizio `web`:
 
-After the API deploys, run migrations from the API service shell:
+1. Vai in **Settings**.
+2. Vai in **Networking**.
+3. Click su **Generate Domain**.
+
+Questo e il dominio principale da aprire.
+
+### Healthcheck
+
+Se Railway ti chiede un healthcheck path, usa:
+
+```txt
+/
+```
+
+## 6. Configura worker
+
+Servizio Railway:
+
+```txt
+worker
+```
+
+### Variables
+
+Metti le stesse variabili del servizio `api`.
+
+L'unica cosa specifica del servizio e:
+
+```env
+RAILWAY_DOCKERFILE_PATH=infra/railway/api.Dockerfile
+```
+
+### Start command
+
+In **Settings -> Deploy -> Custom Start Command**, inserisci:
+
+```bash
+sofu-railway-run-worker
+```
+
+Non generare dominio pubblico per `worker`.
+
+## 7. Configura scheduler
+
+Servizio Railway:
+
+```txt
+scheduler
+```
+
+### Variables
+
+Metti le stesse variabili del servizio `api`.
+
+L'unica cosa specifica del servizio e:
+
+```env
+RAILWAY_DOCKERFILE_PATH=infra/railway/api.Dockerfile
+```
+
+### Start command
+
+In **Settings -> Deploy -> Custom Start Command**, inserisci:
+
+```bash
+sofu-railway-run-scheduler
+```
+
+Non generare dominio pubblico per `scheduler`.
+
+## 8. Genera APP_KEY
+
+In locale:
+
+```bash
+cd apps/api
+php artisan key:generate --show
+```
+
+Copia il valore in Railway come `APP_KEY` su:
+
+```txt
+api
+worker
+scheduler
+```
+
+## 9. Primo deploy
+
+Ordine consigliato:
+
+1. Deploy `Postgres`.
+2. Deploy `api`.
+3. Deploy `web`.
+4. Deploy `worker`.
+5. Deploy `scheduler`.
+
+Se un servizio parte prima che tutte le variabili siano impostate, puo fallire. Non e grave: completa le variabili e fai redeploy.
+
+## 10. Migrazioni
+
+Dopo che `api` e deployato:
+
+1. Apri il servizio `api`.
+2. Apri una shell/console Railway del servizio.
+3. Esegui:
 
 ```bash
 php artisan migrate --force
 ```
 
-For staging/demo data only:
+Solo per staging/demo:
 
 ```bash
 php artisan db:seed --force
 ```
 
-## 4. Custom domain
+Non fare seed in produzione vera.
 
-Add the production custom domain to the `web` service, not directly to the API.
+## 11. Test
 
-Then update:
+Apri il dominio pubblico del servizio:
 
-```env
-APP_URL=https://your-domain.example
-FRONTEND_URL=https://your-domain.example
-SANCTUM_STATEFUL_DOMAINS=your-domain.example
-CORS_ALLOWED_ORIGINS=https://your-domain.example
+```txt
+web
 ```
 
-The browser should use the web domain only. API calls go through `/api` on that same domain.
+Poi testa:
 
-## 5. Notes
+```txt
+https://DOMINIO_WEB/api/v1/health
+```
 
-- Do not run `route:cache` until closure routes are converted to controller actions.
-- Worker and scheduler do not need public domains.
-- Use Railway PostgreSQL backups before going live.
-- Keep Stripe live keys only in Railway variables, never in the repo.
+Deve rispondere:
+
+```json
+{"status":"ok","service":"sofu-api"}
+```
+
+Se funziona questo URL, significa che:
+
+- `web` serve correttamente React;
+- `web` sta inoltrando `/api` ad `api`;
+- `api` sta girando;
+- le variabili principali sono lette correttamente.
+
+## 12. Pagamenti Stripe
+
+Per staging puoi lasciare:
+
+```env
+PAYMENT_PROVIDER=mock
+```
+
+Per produzione vera, su `api`, `worker`, `scheduler` imposta:
+
+```env
+PAYMENT_PROVIDER=stripe
+STRIPE_SECRET=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+Su `web` imposta:
+
+```env
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
+```
+
+Non mettere mai le chiavi Stripe nel repo.
+
+## 13. Se vuoi aggiungere Redis dopo
+
+Se nel tuo dashboard Railway trovi Redis:
+
+1. Crea il servizio Redis dal template/database.
+2. Rinominalo:
+
+```txt
+Redis
+```
+
+3. Su `api`, `worker`, `scheduler` cambia:
+
+```env
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+REDIS_CLIENT=phpredis
+REDIS_URL=${{Redis.REDIS_URL}}
+```
+
+4. Redeploy di `api`, `worker`, `scheduler`.
+
+Se Redis non lo trovi, non blocca il deploy: la queue database funziona per partire.
+
+## 14. Dominio custom
+
+Quando avrai il dominio vero:
+
+1. Aggiungi il dominio custom solo al servizio `web`.
+2. Aggiorna su `api`, `worker`, `scheduler`:
+
+```env
+APP_URL=https://tuodominio.it
+FRONTEND_URL=https://tuodominio.it
+SANCTUM_STATEFUL_DOMAINS=tuodominio.it
+CORS_ALLOWED_ORIGINS=https://tuodominio.it
+```
+
+3. Su `web`, lascia:
+
+```env
+VITE_API_URL=
+```
+
+## Note importanti
+
+- Railway non usa il nostro `docker-compose.yml` per questo deploy.
+- Ogni servizio usa un Dockerfile tramite `RAILWAY_DOCKERFILE_PATH`.
+- Crea i servizi come **Empty Service**, poi collega il repo.
+- Non cambiare root directory: resta sulla root del monorepo.
+- Non usare `route:cache` finche le route closure non vengono convertite in controller.
+- `worker` e `scheduler` non devono avere dominio pubblico.
+- Per partire non serve Redis: Postgres basta per DB, cache database e queue database.
