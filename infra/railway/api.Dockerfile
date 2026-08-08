@@ -1,9 +1,8 @@
-FROM php:8.4-apache-bookworm
+FROM php:8.4-cli-bookworm
 
 WORKDIR /var/www/html
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
-    COMPOSER_ALLOW_SUPERUSER=1 \
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
     PHP_OPCACHE_VALIDATE_TIMESTAMPS=0 \
     PORT=8080
 
@@ -25,12 +24,6 @@ RUN apt-get update \
         zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    && a2enmod rewrite headers \
-    && sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT}!g" /etc/apache2/sites-available/*.conf \
-    && printf '%s\n' '<Directory /var/www/html/public>' '    AllowOverride All' '    Require all granted' '</Directory>' > /etc/apache2/conf-available/sofu-document-root.conf \
-    && printf '%s\n' 'ServerName localhost' > /etc/apache2/conf-available/sofu-server-name.conf \
-    && a2enconf sofu-document-root \
-    && a2enconf sofu-server-name \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/pear
 
@@ -47,6 +40,7 @@ RUN composer install \
 
 COPY apps/api ./
 COPY infra/railway/api-entrypoint.sh /usr/local/bin/sofu-railway-api-entrypoint
+COPY infra/railway/run-api.sh /usr/local/bin/sofu-railway-run-api
 COPY infra/railway/run-worker.sh /usr/local/bin/sofu-railway-run-worker
 COPY infra/railway/run-scheduler.sh /usr/local/bin/sofu-railway-run-scheduler
 
@@ -56,10 +50,12 @@ RUN composer dump-autoload \
     && php artisan package:discover --ansi \
     && sed -i 's/\r$//' \
         /usr/local/bin/sofu-railway-api-entrypoint \
+        /usr/local/bin/sofu-railway-run-api \
         /usr/local/bin/sofu-railway-run-worker \
         /usr/local/bin/sofu-railway-run-scheduler \
     && chmod +x \
         /usr/local/bin/sofu-railway-api-entrypoint \
+        /usr/local/bin/sofu-railway-run-api \
         /usr/local/bin/sofu-railway-run-worker \
         /usr/local/bin/sofu-railway-run-scheduler \
     && mkdir -p \
@@ -72,4 +68,4 @@ RUN composer dump-autoload \
     && chown -R www-data:www-data storage bootstrap/cache
 
 ENTRYPOINT ["/usr/local/bin/sofu-railway-api-entrypoint"]
-CMD ["apache2-foreground"]
+CMD ["sofu-railway-run-api"]
