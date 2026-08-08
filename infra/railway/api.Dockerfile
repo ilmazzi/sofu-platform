@@ -4,7 +4,10 @@ WORKDIR /var/www/html
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
     COMPOSER_ALLOW_SUPERUSER=1 \
-    PHP_OPCACHE_VALIDATE_TIMESTAMPS=0
+    PHP_OPCACHE_VALIDATE_TIMESTAMPS=0 \
+    PORT=8080
+
+EXPOSE 8080
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

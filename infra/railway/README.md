@@ -122,6 +122,7 @@ Nel servizio `api`, vai in **Variables** e inserisci:
 
 ```env
 RAILWAY_DOCKERFILE_PATH=infra/railway/api.Dockerfile
+PORT=8080
 
 APP_NAME=Sofu
 APP_ENV=production
@@ -186,6 +187,7 @@ Nel servizio `web`, vai in **Variables** e inserisci:
 
 ```env
 RAILWAY_DOCKERFILE_PATH=infra/railway/web.Dockerfile
+PORT=8080
 
 VITE_API_URL=
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_CHANGE_ME
