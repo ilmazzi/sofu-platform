@@ -9,6 +9,7 @@ import CampaignDetailPage from './pages/CampaignDetailPage'
 import CampaignsPage from './pages/CampaignsPage'
 import CampaignFormPage from './pages/CampaignFormPage'
 import HomePage from './pages/HomePage'
+import LandingPage from './pages/LandingPage'
 import MyCampaignsPage from './pages/MyCampaignsPage'
 import MyReservationsPage from './pages/MyReservationsPage'
 import PaymentCompletePage from './pages/PaymentCompletePage'
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'welcome', element: <LandingPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'campaigns', element: <CampaignsPage /> },
