@@ -98,26 +98,17 @@ class CreateReservationAction
             }
 
             $priceQuotedCents = $lockedCampaign->current_price_cents;
-            $activeReservationsCount = $lockedCampaign->active_reservations_count;
-            $pledgedTotalCents = 0;
+            $activeReservationsCount = $lockedCampaign->active_reservations_count + $dropCount;
 
-            for ($i = 0; $i < $dropCount; $i++) {
-                $activeReservationsCount++;
-                $pledgedTotalCents += $this->priceCalculator->calculate(
-                    $lockedCampaign->total_amount_cents,
-                    $activeReservationsCount,
-                    $lockedCampaign->min_price_cents,
-                    $lockedCampaign->max_price_cents,
-                );
-            }
-
-            $effectivePriceCents = $pledgedTotalCents;
+            // Impegno = quote × prezzo unitario dopo l’ingresso (totale campagna ÷ quote attive).
+            // Non sommare i prezzi marginali: altrimenti N quote possono superare il goal.
             $finalDropPriceCents = $this->priceCalculator->calculate(
                 $lockedCampaign->total_amount_cents,
                 $activeReservationsCount,
                 $lockedCampaign->min_price_cents,
                 $lockedCampaign->max_price_cents,
             );
+            $effectivePriceCents = $finalDropPriceCents * $dropCount;
 
             $snapshotReason = $reuseReservation !== null ? 'reservation_reactivated' : 'reservation_created';
 

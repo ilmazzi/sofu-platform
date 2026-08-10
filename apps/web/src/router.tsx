@@ -10,6 +10,8 @@ import CampaignsPage from './pages/CampaignsPage'
 import CampaignFormPage from './pages/CampaignFormPage'
 import HomePage from './pages/HomePage'
 import LandingPage from './pages/LandingPage'
+import FoundingPledgePage from './pages/FoundingPledgePage'
+import FoundingStatusPage from './pages/FoundingStatusPage'
 import MyCampaignsPage from './pages/MyCampaignsPage'
 import MyReservationsPage from './pages/MyReservationsPage'
 import PaymentCompletePage from './pages/PaymentCompletePage'
@@ -21,8 +23,11 @@ export const router = createBrowserRouter([
     path: '/',
     element: <RootLayout />,
     children: [
-      { index: true, element: <HomePage /> },
+      { index: true, element: <LandingPage /> },
       { path: 'welcome', element: <LandingPage /> },
+      { path: 'sostieni', element: <FoundingPledgePage /> },
+      { path: 'sostieni/stato', element: <FoundingStatusPage /> },
+      { path: 'home-feed', element: <HomePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'campaigns', element: <CampaignsPage /> },

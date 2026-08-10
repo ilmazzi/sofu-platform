@@ -912,6 +912,247 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/founding/campaign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public founding campaign (Sostieni SoFu) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CampaignWrapped"];
+                    };
+                };
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/founding/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create supporter account on the fly and start session */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        surname: string;
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created and logged in */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                created?: boolean;
+                                already_authenticated?: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Email already registered */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SimpleMessageResponse"];
+                    };
+                };
+                422: components["responses"]["ValidationError"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/founding/setup-intent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Stripe SetupIntent for founding pledge */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["SetupIntent"];
+                        };
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/founding/pledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create founding reservation after successful SetupIntent */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        drop_count: number;
+                        setup_intent_id: string;
+                        idempotency_key: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Idempotent replay */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReservationWrapped"];
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReservationWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SimpleMessageResponse"];
+                    };
+                };
+                422: components["responses"]["ValidationError"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/founding/my-reservation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Current user's founding reservation */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReservationWrapped"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/campaigns/{slug}/reservations": {
         parameters: {
             query?: never;
@@ -933,7 +1174,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        idempotency_key?: string;
+                        /** @description Quante drop il sostenitore promette di versare (default 1). */
+                        drop_count?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Idempotent replay (same key + same supporter/campaign) */
                 200: {
@@ -1732,11 +1981,13 @@ export interface components {
             supporter_id: string;
             status: components["schemas"]["ReservationStatus"];
             price_quoted_cents: number;
-            /** Impegno totale (somma delle drop promesse al momento dell’adesione). */
+            /** @description Impegno totale (somma delle drop promesse al momento dell’adesione). */
             effective_price_cents: number;
-            /** Numero di drop promesse in un’unica adesione. */
+            /** @description Numero di drop promesse in un’unica adesione. */
             drop_count: number;
             price_snapshot_id?: string | null;
+            /** Format: date-time */
+            payment_method_verified_at?: string | null;
             campaign?: components["schemas"]["ReservationCampaignEmbed"];
             price_snapshot?: components["schemas"]["PriceSnapshotEmbed"];
             /** Format: date-time */
@@ -1749,6 +2000,14 @@ export interface components {
         };
         /** @enum {string} */
         PaymentStatus: "requires_confirmation" | "authorized" | "captured" | "failed" | "cancelled" | "refunded";
+        SetupIntent: {
+            /** @enum {string} */
+            type: "setup_intent";
+            /** @enum {string} */
+            provider: "stripe" | "mock";
+            setup_intent_id: string;
+            client_secret: string;
+        };
         Payment: {
             id: string;
             /** @enum {string} */

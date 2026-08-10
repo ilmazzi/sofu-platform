@@ -2,7 +2,6 @@
 
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
-use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
 return [
@@ -79,7 +78,9 @@ return [
     */
 
     'middleware' => [
-        'authenticate_session' => AuthenticateSession::class,
+        // Disabled for SPA cookie auth: logging in mid-request (founding bootstrap)
+        // leaves password_hash_* unset / inconsistent and Sanctum then 401s later POSTs.
+        'authenticate_session' => null,
         'encrypt_cookies' => EncryptCookies::class,
         'validate_csrf_token' => ValidateCsrfToken::class,
     ],

@@ -1,15 +1,24 @@
-import type { ReactElement, ReactNode } from 'react'
-import { Box, Button, Image, Stack, Text, Title } from '@mantine/core'
-import { IconPlayerPlay } from '@tabler/icons-react'
+import { type ReactElement, type ReactNode, useEffect, useState } from 'react'
+import { Box, Button, Group, Image, Stack, Text, Title } from '@mantine/core'
+import {
+  IconBulb,
+  IconHeartHandshake,
+  IconPlayerPlay,
+  IconRoute,
+  IconSeedling,
+} from '@tabler/icons-react'
 import { Link } from 'react-router-dom'
+import type { components } from '@sofu/contracts'
+import { FoundingBrand } from '../founding/FoundingBrand'
+import { FoundingCampaignPulse } from '../founding/FoundingCampaignPulse'
+import { FoundingCostBreakdown } from '../founding/FoundingCostBreakdown'
+import { FoundingShell } from '../founding/FoundingShell'
+import { founding } from '../founding/theme'
+import { apiFetch } from '../lib/api/client'
 
-/** Palette da sfondo.svg — usata come colori di sezione, non come immagine di fondo */
-const TEAL = '#15607a'
-const MUSTARD = '#c9a01a'
-const ORANGE = '#c6761d'
-const RED = '#c63a1d'
-const CREAM = '#f7f1e6'
-const INK = '#1a1208'
+type Campaign = components['schemas']['Campaign']
+
+const { teal, mustard, orange, red, cream, ink, fontDisplay, fontBody } = founding
 
 const IMG_COSA =
   'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1400&q=80'
@@ -17,71 +26,104 @@ const IMG_PERCHE =
   'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1400&q=80'
 
 export default function LandingPage(): ReactElement {
-  return (
-    <Box component="main" style={{ backgroundColor: TEAL, minHeight: '100%' }}>
-      <Box
-        maw={860}
-        mx="auto"
-        px={{ base: 'md', sm: 'xl' }}
-        py={{ base: 'xl', sm: '2.75rem' }}
-        pos="relative"
-      >
-        {/* Righe di accompagnamento da sfondo.svg — solo tratto, sotto il contenuto */}
-        <AccompanimentRails />
+  const [campaign, setCampaign] = useState<Campaign | null>(null)
 
-        {/* 1 — Video */}
-        <Box component="section" mb={{ base: 'xl', sm: '2.5rem' }} pos="relative" style={{ zIndex: 1 }}>
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await apiFetch('/api/v1/founding/campaign')
+        if (!res.ok || cancelled) return
+        const json = (await res.json()) as { data: Campaign }
+        if (!cancelled) setCampaign(json.data)
+      } catch {
+        /* landing resta leggibile anche senza API */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return (
+    <FoundingShell maxWidth={860}>
+        {/* Hero — un solo messaggio + brand Sofu dominante */}
+        <Box
+          component="section"
+          mb={{ base: 'xl', sm: '2.5rem' }}
+          className="founding-fade-up"
+        >
           <Stack gap="lg" align="center" ta="center">
-            <Text
-              size="xs"
-              fw={700}
-              tt="uppercase"
-              c={CREAM}
-              style={{ letterSpacing: '0.22em', opacity: 0.9 }}
-            >
-              Sofu
-            </Text>
+            <Box className="founding-float">
+              <FoundingBrand size="lg" />
+            </Box>
             <Title
               order={1}
-              c={CREAM}
-              fz={{ base: '1.85rem', sm: '2.5rem' }}
+              c={cream}
+              fz={{ base: '1.55rem', sm: '2rem' }}
               fw={650}
-              lh={1.15}
-              maw={640}
-              style={{ letterSpacing: '-0.03em', textWrap: 'balance' }}
+              lh={1.2}
+              maw={560}
+              className="founding-fade-up founding-fade-up-delay-1"
+              style={{ fontFamily: fontDisplay, letterSpacing: '-0.02em', textWrap: 'balance' }}
             >
               Più persone sostengono, meno paga ciascuna.
             </Title>
-            <Text size="md" c={CREAM} maw={520} lh={1.6} style={{ opacity: 0.9 }}>
+            <Text
+              size="md"
+              c={cream}
+              maw={480}
+              lh={1.6}
+              className="founding-fade-up founding-fade-up-delay-2"
+              style={{ opacity: 0.9, fontFamily: fontBody }}
+            >
               Guarda il video dimostrativo.
             </Text>
 
             <Box
               w="100%"
               maw={640}
+              className="founding-fade-up founding-fade-up-delay-3"
               style={{
                 aspectRatio: '16 / 9',
-                borderRadius: 16,
-                border: '1px solid rgba(247,241,230,0.25)',
-                background: 'rgba(8,40,52,0.65)',
+                borderRadius: 4,
+                border: '1px solid rgba(247,241,230,0.28)',
+                background:
+                  'linear-gradient(145deg, rgba(8,40,52,0.85) 0%, rgba(21,96,122,0.55) 55%, rgba(201,160,26,0.25) 100%)',
                 display: 'grid',
                 placeItems: 'center',
+                position: 'relative',
+                overflow: 'hidden',
               }}
               role="img"
               aria-label="Segnaposto video dimostrativo Sofu"
             >
+              <Box
+                className="founding-soft-pulse"
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  width: 180,
+                  height: 180,
+                  borderRadius: '50%',
+                  background: 'rgba(247,241,230,0.12)',
+                }}
+              />
               <Button
                 size="md"
-                radius="xl"
+                radius="md"
                 leftSection={<IconPlayerPlay size={18} />}
                 styles={{
                   root: {
-                    background: CREAM,
-                    color: TEAL,
+                    background: cream,
+                    color: teal,
                     fontWeight: 700,
-                    letterSpacing: '0.04em',
+                    letterSpacing: '0.06em',
                     textTransform: 'uppercase',
                     fontSize: '0.75rem',
+                    fontFamily: fontBody,
+                    position: 'relative',
+                    zIndex: 1,
                   },
                 }}
                 onClick={() => {
@@ -94,16 +136,16 @@ export default function LandingPage(): ReactElement {
           </Stack>
         </Box>
 
-        {/* 2 — Cos'è SoFu */}
-        <Section bg={MUSTARD} title="Cos'è SoFu?" rail>
+        <Section bg={mustard} title="Cos'è SoFu?" icon={<IconBulb size={22} stroke={1.7} />} rail>
 
           <Image
             src={IMG_COSA}
             alt="Persone insieme: comunità e progetti condivisi"
-            radius="md"
-            mah={280}
+            radius={4}
+            mah={300}
             fit="cover"
             w="100%"
+            style={{ animation: 'foundingFadeUp 0.55s ease both' }}
           />
           <Copy>
             SoFu vuole essere una piattaforma di crowdfunding rivoluzionaria, che riporta al centro le
@@ -127,14 +169,17 @@ export default function LandingPage(): ReactElement {
           </Copy>
         </Section>
 
-        {/* 3 — Perché supportarci */}
-        <Section bg={ORANGE} title="Perché supportarci?" rail>
-
+        <Section
+          bg={orange}
+          title="Perché supportarci?"
+          icon={<IconHeartHandshake size={22} stroke={1.7} />}
+          rail
+        >
           <Image
             src={IMG_PERCHE}
             alt="Cura del pianeta e futuro condiviso"
-            radius="md"
-            mah={280}
+            radius={4}
+            mah={300}
             fit="cover"
             w="100%"
           />
@@ -158,18 +203,46 @@ export default function LandingPage(): ReactElement {
           </Copy>
         </Section>
 
-        {/* 4 — Come fare e cosa si ottiene */}
-        <Section bg={RED} title="Come fare e cosa si ottiene?" last rail>
-
+        <Section
+          bg={red}
+          title="Come fare e cosa si ottiene?"
+          icon={<IconRoute size={22} stroke={1.7} />}
+          last
+          rail
+        >
           <Copy>
             Esattamente come funzionerà quando la piattaforma verrà realizzata, questa campagna
-            sfrutta il nostro meccanismo rivoluzionario di raccolta fondi: abbiamo bisogno di{' '}
-            <strong>140mila euro</strong> per tutte le spese legali, di marketing e informatiche
-            (programmazione, server e sicurezza), ma a noi non importa guadagnare all&apos;eccesso,
-            quindi, come si può vedere dallo specchietto relativo alle spese, il nostro guadagno
-            simbolico è di <strong>1 euro</strong>, perché crediamo nella nostra idea (speriamo voglia
-            crederci anche tu).
+            sfrutta il nostro meccanismo rivoluzionario di raccolta fondi: abbiamo bisogno di circa{' '}
+            <strong>140mila euro</strong> per realizzare SoFu. A noi non importa guadagnare
+            all&apos;eccesso: il guadagno della piattaforma è di <strong>1 euro</strong>, perché
+            crediamo nella nostra idea (speriamo voglia crederci anche tu).
           </Copy>
+
+          <Box
+            p="md"
+            style={{
+              background: 'rgba(247,241,230,0.22)',
+              borderRadius: 12,
+              border: '1px solid rgba(26,18,8,0.08)',
+            }}
+          >
+            {campaign?.cost_items?.length ? (
+              <FoundingCostBreakdown
+                items={campaign.cost_items}
+                currency={campaign.currency}
+                totalCents={campaign.cost_subtotal_cents ?? campaign.total_amount_cents}
+                tone="ink"
+              />
+            ) : (
+              <FoundingCostBreakdown
+                items={STATIC_FOUNDING_COSTS}
+                currency="EUR"
+                totalCents={14_000_100}
+                tone="ink"
+              />
+            )}
+          </Box>
+
           <Copy>
             Essendo un investimento, la quota che chiediamo è di <strong>5mila euro</strong>, ma già
             da questo elemento si può notare la bellezza del nostro meccanismo: 5mila euro sono il
@@ -182,20 +255,20 @@ export default function LandingPage(): ReactElement {
             sostenerci verrà prelevato il valore finale delle quote.
           </Copy>
           <Copy>
-            Al raggiungimento dei 140mila euro si sprigionerà il vero potenziale di SoFu: a ogni nuova
-            quota sottoscritta, il valore delle quote andrà a diminuire. Per chiarire meglio il tutto,
-            non serve che un esempio:
+            Al raggiungimento dei circa 140mila euro si sprigionerà il vero potenziale di SoFu: a ogni
+            nuova quota sottoscritta, il valore delle quote andrà a diminuire. Per chiarire meglio il
+            tutto, non serve che un esempio:
           </Copy>
           <Stack
             gap="sm"
             p="md"
             style={{
-              background: 'rgba(20,8,8,0.1)',
+              background: 'rgba(20,8,8,0.12)',
               borderRadius: 12,
             }}
           >
             <Example>
-              a noi servono <strong>140mila euro</strong>;
+              a noi servono circa <strong>140mila euro</strong>;
             </Example>
             <Example>
               vengono sottoscritte <strong>10 quote</strong> → la campagna non si realizza, cercheremo
@@ -208,19 +281,23 @@ export default function LandingPage(): ReactElement {
               quote);
             </Example>
             <Example>
-              troviamo un sacco di persone che credono in noi e sottoscrivono <strong>50 quote</strong>{' '}
-              → non solo la campagna si realizza, ma preleveremo soltanto <strong>2800 euro</strong>{' '}
-              per ogni quota sottoscritta (goal / quote sottoscritte = valore delle quote).
+              troviamo un sacco di persone che credono in noi e sottoscrivono{' '}
+              <strong>140 mila quote</strong> → non solo la campagna si realizza, ma ciascuna
+              persona pagherebbe soltanto <strong>1 euro</strong> (obiettivo ÷ quote
+              sottoscritte). È questa la forza di SoFu: più persone sostengono, meno paga
+              ciascuna.
             </Example>
           </Stack>
 
           <Button
             component={Link}
-            to="/register"
+            to="/sostieni"
             size="lg"
             fullWidth
             color="dark"
             mt="sm"
+            leftSection={<IconSeedling size={20} stroke={1.75} />}
+            className="founding-cta-shimmer"
             styles={{
               root: {
                 minHeight: 56,
@@ -228,76 +305,59 @@ export default function LandingPage(): ReactElement {
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
                 fontSize: '0.9rem',
+                fontFamily: fontBody,
+                borderRadius: 10,
+                position: 'relative',
+                overflow: 'hidden',
               },
             }}
           >
             Sostieni SoFu
           </Button>
+          <Text size="sm" ta="center" mt="sm" c={ink} style={{ opacity: 0.85, fontFamily: fontBody }}>
+            Hai già sostenuto?{' '}
+            <Link to="/login?next=/sostieni/stato" style={{ color: ink, fontWeight: 700 }}>
+              Accedi al tuo impegno
+            </Link>
+          </Text>
         </Section>
-      </Box>
-    </Box>
+
+        {campaign ? (
+          <Box mt={{ base: 'lg', sm: 'xl' }}>
+            <FoundingCampaignPulse campaign={campaign} />
+          </Box>
+        ) : null}
+    </FoundingShell>
   )
 }
 
-/** Tre linee (giallo → arancio → rosso) come nello sfondo: dal top-right, curve a sinistra, poi scendono. */
-function AccompanimentRails(): ReactElement {
-  const sw = 1.75
-  const common = {
-    fill: 'none' as const,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    vectorEffect: 'non-scaling-stroke' as const,
-  }
-
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 0,
-        overflow: 'visible',
-      }}
-    >
-      {/* Rosso — rotaia esterna, fino al pannello rosso */}
-      <path
-        {...common}
-        d="M 97.2 1.2 V 21.5 Q 97.2 23.2 95.5 23.2 H 4.2 Q 2.2 23.2 2.2 25.2 V 97"
-        stroke={RED}
-        strokeWidth={sw}
-      />
-      {/* Arancio — media, fino al pannello arancio */}
-      <path
-        {...common}
-        d="M 95.4 1.2 V 20.6 Q 95.4 22.4 93.6 22.4 H 5.6 Q 3.8 22.4 3.8 24.2 V 72"
-        stroke={ORANGE}
-        strokeWidth={sw}
-      />
-      {/* Giallo — interna, fino al pannello giallo */}
-      <path
-        {...common}
-        d="M 93.6 1.2 V 19.7 Q 93.6 21.5 91.8 21.5 H 7 Q 5.4 21.5 5.4 23.2 V 42"
-        stroke={MUSTARD}
-        strokeWidth={sw}
-      />
-    </svg>
-  )
-}
+/** Fallback se l’API non risponde: allineato al seed founding. */
+const STATIC_FOUNDING_COSTS: components['schemas']['CampaignCostItem'][] = [
+  { id: '1', type: 'campaign_cost_item', label: 'Sviluppo', amount_cents: 5_000_000, sort_order: 0 },
+  { id: '2', type: 'campaign_cost_item', label: 'Sicurezza', amount_cents: 800_000, sort_order: 1 },
+  { id: '3', type: 'campaign_cost_item', label: 'Costi legali', amount_cents: 2_000_000, sort_order: 2 },
+  {
+    id: '4',
+    type: 'campaign_cost_item',
+    label: 'Marketing e comunicazione',
+    amount_cents: 5_000_000,
+    sort_order: 3,
+  },
+  { id: '5', type: 'campaign_cost_item', label: 'Server+HelpDesk', amount_cents: 1_200_000, sort_order: 4 },
+  { id: '6', type: 'campaign_cost_item', label: 'Guadagno', amount_cents: 100, sort_order: 5 },
+]
 
 function Section({
   bg,
   title,
+  icon,
   children,
   last = false,
   rail = false,
 }: {
   bg: string
   title: string
+  icon?: ReactNode
   children: ReactNode
   last?: boolean
   rail?: boolean
@@ -310,22 +370,41 @@ function Section({
       py={{ base: 'xl', sm: '2.25rem' }}
       ml={rail ? { base: 14, sm: 18 } : undefined}
       pos="relative"
+      className="founding-fade-up"
       style={{
         backgroundColor: bg,
-        borderRadius: 20,
+        borderRadius: 28,
         zIndex: 1,
+        boxShadow: '0 18px 40px rgba(8, 40, 52, 0.16)',
       }}
     >
       <Stack gap="md">
-        <Title
-          order={2}
-          fz={{ base: '1.55rem', sm: '1.9rem' }}
-          fw={700}
-          c={INK}
-          style={{ letterSpacing: '-0.02em' }}
-        >
-          {title}
-        </Title>
+        <Group gap="sm" wrap="nowrap" align="center">
+          {icon ? (
+            <Box
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: 'rgba(26,18,8,0.1)',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {icon}
+            </Box>
+          ) : null}
+          <Title
+            order={2}
+            fz={{ base: '1.55rem', sm: '1.95rem' }}
+            fw={800}
+            c={ink}
+            style={{ letterSpacing: '-0.02em', fontFamily: fontDisplay }}
+          >
+            {title}
+          </Title>
+        </Group>
         {children}
       </Stack>
     </Box>
@@ -334,7 +413,7 @@ function Section({
 
 function Copy({ children }: { children: ReactNode }): ReactElement {
   return (
-    <Text size="md" lh={1.7} style={{ color: 'rgba(26,18,8,0.92)' }}>
+    <Text size="md" lh={1.7} style={{ color: 'rgba(26,18,8,0.92)', fontFamily: fontBody }}>
       {children}
     </Text>
   )
@@ -342,7 +421,7 @@ function Copy({ children }: { children: ReactNode }): ReactElement {
 
 function Example({ children }: { children: ReactNode }): ReactElement {
   return (
-    <Text size="sm" lh={1.6} style={{ color: 'rgba(26,18,8,0.92)' }}>
+    <Text size="sm" lh={1.6} style={{ color: 'rgba(26,18,8,0.92)', fontFamily: fontBody }}>
       {children}
     </Text>
   )

@@ -523,6 +523,157 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /api/v1/founding/campaign:
+    get:
+      tags: [Founding]
+      summary: Public founding campaign (Sostieni SoFu)
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignWrapped'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/founding/bootstrap:
+    post:
+      tags: [Founding]
+      summary: Create supporter account on the fly and start session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, surname, email]
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+                surname:
+                  type: string
+                  maxLength: 80
+                email:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: Created and logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+                  meta:
+                    type: object
+                    properties:
+                      created:
+                        type: boolean
+                      already_authenticated:
+                        type: boolean
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleMessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/founding/setup-intent:
+    post:
+      tags: [Founding]
+      summary: Create Stripe SetupIntent for founding pledge
+      security:
+        - session: []
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SetupIntent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/founding/pledge:
+    post:
+      tags: [Founding]
+      summary: Create founding reservation after successful SetupIntent
+      security:
+        - session: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [drop_count, setup_intent_id, idempotency_key]
+              properties:
+                drop_count:
+                  type: integer
+                  minimum: 1
+                  maximum: 10000
+                setup_intent_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                  maxLength: 160
+      responses:
+        '200':
+          description: Idempotent replay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationWrapped'
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleMessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/founding/my-reservation:
+    get:
+      tags: [Founding]
+      summary: Current user's founding reservation
+      security:
+        - session: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationWrapped'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/campaigns/{slug}/reservations:
     post:
       tags: [Reservations]
@@ -1465,6 +1616,10 @@ components:
         price_snapshot_id:
           type: string
           nullable: true
+        payment_method_verified_at:
+          type: string
+          format: date-time
+          nullable: true
         campaign:
           $ref: '#/components/schemas/ReservationCampaignEmbed'
         price_snapshot:
@@ -1492,6 +1647,25 @@ components:
         - failed
         - cancelled
         - refunded
+
+    SetupIntent:
+      type: object
+      required:
+        - type
+        - provider
+        - setup_intent_id
+        - client_secret
+      properties:
+        type:
+          type: string
+          enum: [setup_intent]
+        provider:
+          type: string
+          enum: [stripe, mock]
+        setup_intent_id:
+          type: string
+        client_secret:
+          type: string
 
     Payment:
       type: object

@@ -44,25 +44,17 @@ class AddReservationDropsAction
                 throw new ConflictHttpException('Campaign is not open for reservations.');
             }
 
-            $activeReservationsCount = $lockedCampaign->active_reservations_count;
-            $pledgedTotalCents = $locked->effective_price_cents;
+            $activeReservationsCount = $lockedCampaign->active_reservations_count + $additionalDrops;
+            $newDropCount = $locked->dropCount() + $additionalDrops;
 
-            for ($i = 0; $i < $additionalDrops; $i++) {
-                $activeReservationsCount++;
-                $pledgedTotalCents += $this->priceCalculator->calculate(
-                    $lockedCampaign->total_amount_cents,
-                    $activeReservationsCount,
-                    $lockedCampaign->min_price_cents,
-                    $lockedCampaign->max_price_cents,
-                );
-            }
-
+            // Ricalcola tutto l’impegno a prezzo unitario corrente (quote × prezzo), senza somma marginale.
             $finalDropPriceCents = $this->priceCalculator->calculate(
                 $lockedCampaign->total_amount_cents,
                 $activeReservationsCount,
                 $lockedCampaign->min_price_cents,
                 $lockedCampaign->max_price_cents,
             );
+            $pledgedTotalCents = $finalDropPriceCents * $newDropCount;
 
             $snapshot = CampaignPriceSnapshot::create([
                 'campaign_id' => $lockedCampaign->id,
@@ -73,8 +65,6 @@ class AddReservationDropsAction
                 'total_amount_cents' => $lockedCampaign->total_amount_cents,
                 'reason' => 'reservation_drops_added',
             ]);
-
-            $newDropCount = $locked->dropCount() + $additionalDrops;
 
             $locked->forceFill([
                 'effective_price_cents' => $pledgedTotalCents,

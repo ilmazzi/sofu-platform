@@ -20,6 +20,13 @@ Optional: copy `.env.example` to `.env`. Leave `VITE_API_URL` empty in developme
 
 Per **Stripe** in locale: imposta `VITE_STRIPE_PUBLISHABLE_KEY=pk_test_…` (Dashboard Stripe → chiavi pubblicabile). L’API usa già `STRIPE_SECRET` / webhook; senza la chiave pubblica il modulo di pagamento non si monta.
 
+## Campagna fondante (Sostieni SoFu)
+
+- Home pubblica: `/` (landing). Feed campagne nascosto in `/home-feed`.
+- Pledge: `/sostieni` → SetupIntent carta → `/sostieni/stato`
+- Seed campagna: da `apps/api` esegui `php artisan db:seed` (slug `sofu-founding`, goal 140k €).
+- Con `PAYMENT_PROVIDER=mock` la verifica carta è simulata in UI.
+
 ## Develop
 
 ```bash
@@ -28,7 +35,16 @@ npm run dev
 
 Open the URL printed by Vite as **`http://localhost:5173`** (not `http://127.0.0.1:5173`). The dev proxy forwards `/api` and `/sanctum` to **`http://sofu-platform.test`**; mixing `127.0.0.1` in the browser with `localhost:5173` cookies can drop session/CSRF cookies and break register/login.
 
-Ensure Herd is serving the API at `http://sofu-platform.test` (or adjust `vite.config.ts` `server.proxy` targets to match your Herd hostname).
+Ensure the API is reachable. **On this machine** `sofu-platform.test` may be answered by XAMPP (wrong app). Run the Sofu API with:
+
+```bash
+cd apps/api
+php -S 127.0.0.1:18080 -t public
+```
+
+Vite proxies `/api` to `http://127.0.0.1:18080` via `VITE_DEV_API_PROXY` in `apps/web/.env`. Restart `npm run dev` after changing that value.
+
+To use Herd instead: stop XAMPP Apache so port 80 is free, then set `VITE_DEV_API_PROXY=http://sofu-platform.test`.
 
 ## Build
 

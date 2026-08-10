@@ -118,5 +118,45 @@ class DatabaseSeeder extends Seeder
             ['label' => 'Obiettivo', 'amount_cents' => 50_000, 'sort_order' => 0],
             ['label' => 'Guadagno', 'amount_cents' => 0, 'sort_order' => 1],
         ]);
+
+        $founding = Campaign::query()->firstOrNew(['slug' => 'sofu-founding']);
+        $founding->fill([
+            'creator_id' => $creator->id,
+            'title' => 'Sostieni SoFu',
+            'summary' => 'Campagna fondante: usiamo SoFu per finanziare SoFu.',
+            'description' => 'Raccolta fondi per realizzare la piattaforma SoFu: sviluppo, sicurezza, costi legali, marketing, server e help desk. Guadagno piattaforma: 1 euro.',
+            'video_url' => null,
+            'category' => 'community',
+            'status' => CampaignStatus::Published,
+            'currency' => 'EUR',
+            'is_commercial' => false,
+            'target_supporters' => 28,
+            'full_bloom_drops' => 140_001,
+            'min_price_cents' => 100,
+            'max_price_cents' => 500_004,
+            'total_amount_cents' => 14_000_100,
+            'published_at' => $founding->published_at ?? now(),
+            'starts_at' => null,
+            'ends_at' => $founding->ends_at ?? now()->addMonths(12),
+        ]);
+        if (! $founding->exists) {
+            $founding->active_reservations_count = 0;
+        }
+        // Prezzo attuale = totale / quote attive (clamp min/max); con 0 quote = max.
+        $active = (int) ($founding->active_reservations_count ?? 0);
+        $founding->current_price_cents = $active <= 0
+            ? 500_004
+            : max(100, min(500_004, (int) ceil(14_000_100 / $active)));
+        $founding->save();
+
+        $founding->costItems()->delete();
+        $founding->costItems()->createMany([
+            ['label' => 'Sviluppo', 'amount_cents' => 5_000_000, 'sort_order' => 0],
+            ['label' => 'Sicurezza', 'amount_cents' => 800_000, 'sort_order' => 1],
+            ['label' => 'Costi legali', 'amount_cents' => 2_000_000, 'sort_order' => 2],
+            ['label' => 'Marketing e comunicazione', 'amount_cents' => 5_000_000, 'sort_order' => 3],
+            ['label' => 'Server+HelpDesk', 'amount_cents' => 1_200_000, 'sort_order' => 4],
+            ['label' => 'Guadagno', 'amount_cents' => 100, 'sort_order' => 5],
+        ]);
     }
 }

@@ -22,6 +22,7 @@ class ReservationResource extends JsonResource
             'effective_price_cents' => $this->effective_price_cents,
             'drop_count' => $this->dropCount(),
             'price_snapshot_id' => $this->price_snapshot_id ? (string) $this->price_snapshot_id : null,
+            'payment_method_verified_at' => $this->payment_method_verified_at?->toISOString(),
             'campaign' => $this->whenLoaded('campaign', fn () => [
                 'id' => (string) $this->campaign->id,
                 'type' => 'campaign',

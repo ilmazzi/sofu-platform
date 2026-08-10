@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactElement } from 'react'
 import { Alert, Anchor, Button, Card, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api/client'
@@ -9,6 +9,7 @@ type UserWrapped = { data: components['schemas']['User'] }
 
 export default function LoginPage(): ReactElement {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { refresh } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -49,7 +50,8 @@ export default function LoginPage(): ReactElement {
         return
       }
       await refresh()
-      navigate('/campaigns', { replace: true })
+      const next = searchParams.get('next')
+      navigate(next && next.startsWith('/') ? next : '/', { replace: true })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Richiesta non riuscita.'
       setError(

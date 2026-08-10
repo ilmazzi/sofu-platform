@@ -51,6 +51,38 @@ class ReservationsTest extends TestCase
         ]);
     }
 
+    public function test_multi_drop_commitment_does_not_exceed_campaign_goal(): void
+    {
+        $campaign = Campaign::factory()->published()->create([
+            'total_amount_cents' => 14_000_100,
+            'min_price_cents' => 100,
+            'max_price_cents' => 500_004,
+            'current_price_cents' => 500_004,
+            'active_reservations_count' => 0,
+            'target_supporters' => 28,
+            'full_bloom_drops' => 140_001,
+        ]);
+        $supporter = User::factory()->create();
+
+        $this
+            ->actingAs($supporter)
+            ->withHeader('Idempotency-Key', 'forty-three-drops')
+            ->postJson("/api/v1/campaigns/{$campaign->slug}/reservations", [
+                'drop_count' => 43,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.drop_count', 43);
+
+        $effective = (int) $this->actingAs($supporter)->getJson('/api/v1/me/reservations')->json('data.0.effective_price_cents');
+
+        $this->assertLessThanOrEqual(14_000_100 + 43, $effective);
+        $this->assertGreaterThan(13_900_000, $effective);
+
+        $campaign->refresh();
+        $this->assertSame(43, $campaign->active_reservations_count);
+        $this->assertSame((int) ceil(14_000_100 / 43), $campaign->current_price_cents);
+    }
+
     public function test_supporter_can_pledge_multiple_drops_in_one_reservation(): void
     {
         $campaign = Campaign::factory()->published()->create([

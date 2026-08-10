@@ -57,7 +57,28 @@ class ProcessStripeWebhookAction
                 ];
             }
 
-            if (! in_array($event->type, ['payment_intent.succeeded', 'payment_intent.payment_failed'], true)) {
+            if (! in_array($event->type, [
+                'payment_intent.succeeded',
+                'payment_intent.payment_failed',
+                'setup_intent.succeeded',
+                'setup_intent.setup_failed',
+            ], true)) {
+                $row = PaymentProviderEvent::create([
+                    'provider' => 'stripe',
+                    'provider_event_id' => $event->id,
+                    'event_type' => $event->type,
+                    'payload' => $this->decodePayload($payload),
+                    'processed_at' => now(),
+                ]);
+
+                return [
+                    'event' => $row,
+                    'payment' => null,
+                    'created' => true,
+                ];
+            }
+
+            if (str_starts_with($event->type, 'setup_intent.')) {
                 $row = PaymentProviderEvent::create([
                     'provider' => 'stripe',
                     'provider_event_id' => $event->id,

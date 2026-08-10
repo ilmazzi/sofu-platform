@@ -23,6 +23,8 @@ class Reservation extends Model
         'price_snapshot_id',
         'idempotency_key',
         'payload_hash',
+        'stripe_payment_method_id',
+        'payment_method_verified_at',
     ];
 
     protected function casts(): array
@@ -32,6 +34,7 @@ class Reservation extends Model
             'price_quoted_cents' => 'integer',
             'effective_price_cents' => 'integer',
             'drop_count' => 'integer',
+            'payment_method_verified_at' => 'datetime',
         ];
     }
 

@@ -51,4 +51,11 @@ return [
     */
     'default_campaign_timezone' => (string) env('SOFU_DEFAULT_CAMPAIGN_TIMEZONE', 'Europe/Rome'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Campagna fondante (Sostieni SoFu)
+    |--------------------------------------------------------------------------
+    */
+    'founding_campaign_slug' => (string) env('SOFU_FOUNDING_CAMPAIGN_SLUG', 'sofu-founding'),
+
 ];
