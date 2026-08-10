@@ -5,6 +5,7 @@ namespace App\Modules\Founding\Http\Controllers;
 use App\Modules\Campaigns\Http\Resources\CampaignResource;
 use App\Modules\Founding\Application\BootstrapFoundingUserAction;
 use App\Modules\Founding\Application\CreateFoundingPledgeAction;
+use App\Modules\Founding\Application\ResolveFoundingCampaignAction;
 use App\Modules\Founding\Http\Requests\BootstrapFoundingRequest;
 use App\Modules\Founding\Http\Requests\StoreFoundingPledgeRequest;
 use App\Modules\Identity\Http\Resources\UserResource;
@@ -17,9 +18,9 @@ use Illuminate\Http\Request;
 
 class FoundingController
 {
-    public function campaign(CreateFoundingPledgeAction $pledge): CampaignResource
+    public function campaign(ResolveFoundingCampaignAction $resolve): CampaignResource
     {
-        $campaign = $pledge->foundingCampaign()->load(['costItems', 'media']);
+        $campaign = $resolve->execute()->load(['costItems', 'media']);
 
         return CampaignResource::make($campaign);
     }
@@ -82,11 +83,11 @@ class FoundingController
             ->setStatusCode($result['created'] ? 201 : 200);
     }
 
-    public function myReservation(Request $request, CreateFoundingPledgeAction $pledge): JsonResponse
+    public function myReservation(Request $request, ResolveFoundingCampaignAction $resolve): JsonResponse
     {
         /** @var \App\Models\User $user */
         $user = $request->user();
-        $campaign = $pledge->foundingCampaign();
+        $campaign = $resolve->execute();
 
         $reservation = Reservation::query()
             ->where('campaign_id', $campaign->id)

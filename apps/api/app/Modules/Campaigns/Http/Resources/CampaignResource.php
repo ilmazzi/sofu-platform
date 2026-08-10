@@ -27,7 +27,7 @@ class CampaignResource extends JsonResource
             'currency' => $this->currency,
             'is_commercial' => (bool) $this->is_commercial,
             'sofu_fee_waiver_requested' => (bool) $this->sofu_fee_waiver_requested,
-            'sofu_fee_waiver_state' => $this->sofu_fee_waiver_state->value,
+            'sofu_fee_waiver_state' => $this->sofu_fee_waiver_state?->value ?? 'not_requested',
             'sofu_fee_waiver_review_note' => $this->sofu_fee_waiver_review_note,
             'target_supporters' => $this->target_supporters,
             'bloom_supporters_threshold' => $this->bloomSupportersThreshold(),

@@ -3,7 +3,6 @@
 namespace App\Modules\Payments\Infrastructure\Providers;
 
 use App\Models\User;
-use App\Models\User;
 use App\Modules\Payments\Domain\Contracts\PaymentProvider;
 use App\Modules\Payments\Domain\PaymentIntentData;
 use App\Modules\Payments\Domain\SetupIntentData;
