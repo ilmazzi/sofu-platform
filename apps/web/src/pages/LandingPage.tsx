@@ -288,45 +288,37 @@ export default function LandingPage(): ReactElement {
               ciascuna.
             </Example>
           </Stack>
-
-          <Button
-            component={Link}
-            to="/sostieni"
-            size="lg"
-            fullWidth
-            color="dark"
-            mt="sm"
-            leftSection={<IconSeedling size={20} stroke={1.75} />}
-            className="founding-cta-shimmer"
-            styles={{
-              root: {
-                minHeight: 56,
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                fontSize: '0.9rem',
-                fontFamily: fontBody,
-                borderRadius: 10,
-                position: 'relative',
-                overflow: 'hidden',
-              },
-            }}
-          >
-            Sostieni SoFu
-          </Button>
-          <Text size="sm" ta="center" mt="sm" c={ink} style={{ opacity: 0.85, fontFamily: fontBody }}>
-            Hai già sostenuto?{' '}
-            <Link to="/login?next=/sostieni/stato" style={{ color: ink, fontWeight: 700 }}>
-              Accedi al tuo impegno
-            </Link>
-          </Text>
         </Section>
 
         {campaign ? (
           <Box mt={{ base: 'lg', sm: 'xl' }}>
-            <FoundingCampaignPulse campaign={campaign} />
+            <FoundingCampaignPulse campaign={campaign} showSupportCta />
           </Box>
-        ) : null}
+        ) : (
+          <Box mt={{ base: 'lg', sm: 'xl' }}>
+            <Button
+              component={Link}
+              to="/sostieni"
+              size="lg"
+              fullWidth
+              color="dark"
+              leftSection={<IconSeedling size={20} stroke={1.75} />}
+              styles={{
+                root: {
+                  minHeight: 56,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  fontSize: '0.9rem',
+                  fontFamily: fontBody,
+                  borderRadius: 10,
+                },
+              }}
+            >
+              Sostieni SoFu
+            </Button>
+          </Box>
+        )}
     </FoundingShell>
   )
 }

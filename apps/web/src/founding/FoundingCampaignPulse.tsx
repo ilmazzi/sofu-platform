@@ -1,12 +1,14 @@
 import type { CSSProperties, ReactElement } from 'react'
-import { Box, Group, Stack, Text } from '@mantine/core'
+import { Box, Button, Group, Stack, Text } from '@mantine/core'
 import {
   IconArrowDownRight,
   IconFlag,
   IconPlant2,
+  IconSeedling,
   IconTrendingDown,
   IconUsers,
 } from '@tabler/icons-react'
+import { Link } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
 import { formatEuro, supporterProgressPercent } from '../lib/campaignMetrics'
 import { founding } from './theme'
@@ -16,9 +18,15 @@ type Campaign = components['schemas']['Campaign']
 type Props = {
   campaign: Campaign
   accent?: string
+  /** CTA in fondo card (landing). */
+  showSupportCta?: boolean
 }
 
-export function FoundingCampaignPulse({ campaign, accent = founding.mustard }: Props): ReactElement {
+export function FoundingCampaignPulse({
+  campaign,
+  accent = founding.mustard,
+  showSupportCta = false,
+}: Props): ReactElement {
   const pct = Math.min(100, Math.max(0, supporterProgressPercent(campaign)))
   const bloomed = campaign.active_reservations_count >= campaign.target_supporters
   const radius = 42
@@ -204,6 +212,41 @@ export function FoundingCampaignPulse({ campaign, accent = founding.mustard }: P
         <Text size="xs" style={{ opacity: 0.78, fontFamily: founding.fontBody, lineHeight: 1.45 }}>
           Più persone sostengono, meno paga ciascuna: con ~140 mila quote si arriva a circa 1 € a quota.
         </Text>
+
+        {showSupportCta ? (
+          <Stack gap="sm" mt={4}>
+            <Button
+              component={Link}
+              to="/sostieni"
+              size="lg"
+              fullWidth
+              color="dark"
+              leftSection={<IconSeedling size={20} stroke={1.75} />}
+              className="founding-cta-shimmer"
+              styles={{
+                root: {
+                  minHeight: 56,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  fontSize: '0.9rem',
+                  fontFamily: founding.fontBody,
+                  borderRadius: 10,
+                  position: 'relative',
+                  overflow: 'hidden',
+                },
+              }}
+            >
+              Sostieni SoFu
+            </Button>
+            <Text size="sm" ta="center" style={{ opacity: 0.85, fontFamily: founding.fontBody }}>
+              Hai già sostenuto?{' '}
+              <Link to="/login?next=/sostieni/stato" style={{ color: founding.ink, fontWeight: 700 }}>
+                Accedi al tuo impegno
+              </Link>
+            </Text>
+          </Stack>
+        ) : null}
       </Stack>
     </Box>
   )
