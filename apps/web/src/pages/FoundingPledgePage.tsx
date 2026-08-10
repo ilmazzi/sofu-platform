@@ -387,6 +387,27 @@ export default function FoundingPledgePage(): ReactElement {
               </Stack>
             ) : null}
           </Box>
+
+          <Button
+            component={Link}
+            to="/"
+            variant="subtle"
+            fullWidth
+            styles={{
+              root: {
+                color: cream,
+                fontFamily: fontBody,
+                fontWeight: 600,
+                background: 'transparent',
+                '&:hover': {
+                  background: 'rgba(247,241,230,0.14)',
+                  color: cream,
+                },
+              },
+            }}
+          >
+            Torna alla landing
+          </Button>
         </Stack>
     </FoundingShell>
   )
