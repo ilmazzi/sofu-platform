@@ -8,6 +8,14 @@ ARG VITE_STRIPE_PUBLISHABLE_KEY=
 ENV VITE_API_URL=${VITE_API_URL} \
     VITE_STRIPE_PUBLISHABLE_KEY=${VITE_STRIPE_PUBLISHABLE_KEY}
 
+# Fail fast if Stripe publishable key is missing or still the README placeholder.
+RUN if [ -z "$VITE_STRIPE_PUBLISHABLE_KEY" ] || \
+       [ "$VITE_STRIPE_PUBLISHABLE_KEY" = "pk_test_CHANGE_ME" ] || \
+       [ "$VITE_STRIPE_PUBLISHABLE_KEY" = "pk_test_REPLACE_ME" ]; then \
+      echo "ERROR: set a real VITE_STRIPE_PUBLISHABLE_KEY on the web service (Dashboard Stripe → Publishable key), then redeploy." >&2; \
+      exit 1; \
+    fi
+
 COPY packages/contracts/package.json packages/contracts/package-lock.json ./packages/contracts/
 COPY packages/contracts/openapi ./packages/contracts/openapi
 COPY packages/contracts/generated ./packages/contracts/generated

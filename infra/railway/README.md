@@ -190,7 +190,11 @@ RAILWAY_DOCKERFILE_PATH=infra/railway/web.Dockerfile
 PORT=8080
 
 VITE_API_URL=
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_CHANGE_ME
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxx
+
+# IMPORTANTE: questa variabile viene “infornata” nel build Docker.
+# Dopo averla impostata con la chiave reale da Stripe Dashboard → Redeploy del servizio web.
+# Se resta pk_test_CHANGE_ME, Stripe risponde 401 e i campi carta non si montano.
 
 API_UPSTREAM=https://${{api.RAILWAY_PUBLIC_DOMAIN}}
 ```
