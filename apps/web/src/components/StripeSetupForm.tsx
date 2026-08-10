@@ -1,7 +1,7 @@
-import { type FormEvent, type ReactElement, useMemo, useState } from 'react'
+import { type FormEvent, type ReactElement, useEffect, useState } from 'react'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
-import { Alert, Button, Stack } from '@mantine/core'
+import { loadStripe, type Stripe } from '@stripe/stripe-js'
+import { Alert, Button, Loader, Stack, Text } from '@mantine/core'
 import { getStripePublishableKey } from '../lib/stripePublishableKey'
 
 function InnerSetup({
@@ -15,6 +15,18 @@ function InnerSetup({
   const elements = useElements()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [elementReady, setElementReady] = useState(false)
+  const [elementError, setElementError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (stripe) return
+    const t = window.setTimeout(() => {
+      setElementError(
+        'Stripe non si è caricato. Controlla VITE_STRIPE_PUBLISHABLE_KEY sul servizio web (build) e che sia allineata a STRIPE_SECRET (entrambe test o entrambe live).',
+      )
+    }, 12_000)
+    return () => window.clearTimeout(t)
+  }, [stripe])
 
   async function onSubmit(e: FormEvent): Promise<void> {
     e.preventDefault()
@@ -22,34 +34,82 @@ function InnerSetup({
     setBusy(true)
     setMessage(null)
 
-    const { error, setupIntent } = await stripe.confirmSetup({
-      elements,
-      redirect: 'if_required',
-      confirmParams: {
-        return_url: `${window.location.origin}/sostieni`,
-      },
-    })
+    try {
+      const { error, setupIntent } = await stripe.confirmSetup({
+        elements,
+        redirect: 'if_required',
+        confirmParams: {
+          return_url: `${window.location.origin}/sostieni`,
+        },
+      })
 
-    setBusy(false)
+      if (error) {
+        setMessage(error.message ?? 'Verifica della carta non riuscita.')
+        return
+      }
 
-    if (error) {
-      setMessage(error.message ?? 'Verifica della carta non riuscita.')
-      return
+      if (!setupIntent?.id || setupIntent.status !== 'succeeded') {
+        setMessage('La verifica della carta non è ancora completa. Riprova.')
+        return
+      }
+
+      await onCompleted(setupIntent.id)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Errore durante la verifica carta.')
+    } finally {
+      setBusy(false)
     }
+  }
 
-    if (!setupIntent?.id || setupIntent.status !== 'succeeded') {
-      setMessage('La verifica della carta non è ancora completa. Riprova.')
-      return
-    }
+  if (elementError && !stripe) {
+    return (
+      <Alert color="red" variant="light">
+        {elementError}
+      </Alert>
+    )
+  }
 
-    await onCompleted(setupIntent.id)
+  if (!stripe || !elements) {
+    return (
+      <Stack gap="sm" align="center" py="md">
+        <Loader color="dark" size="sm" />
+        <Text size="sm" c="dimmed">
+          Caricamento modulo carta…
+        </Text>
+      </Stack>
+    )
   }
 
   return (
     <form onSubmit={(e) => void onSubmit(e)}>
       <Stack gap="md">
-        <PaymentElement />
-        <Button type="submit" disabled={!stripe || busy} loading={busy} color="dark" radius="md" fullWidth>
+        {!elementReady ? (
+          <Stack gap="xs" align="center" py="sm">
+            <Loader color="dark" size="sm" />
+            <Text size="sm" c="dimmed">
+              Preparazione campi carta…
+            </Text>
+          </Stack>
+        ) : null}
+        <PaymentElement
+          onReady={() => setElementReady(true)}
+          onLoadError={(e) => {
+            setElementError(e.error.message ?? 'Impossibile caricare i campi carta Stripe.')
+          }}
+        />
+        {elementError ? (
+          <Alert color="red" variant="light">
+            {elementError}
+          </Alert>
+        ) : null}
+        <Button
+          type="submit"
+          disabled={!elementReady || busy}
+          loading={busy}
+          color="dark"
+          radius="md"
+          fullWidth
+        >
           {submitLabel}
         </Button>
         {message ? (
@@ -74,7 +134,31 @@ export function StripeSetupForm({
   setupIntentId: string
   onCompleted: (setupIntentId: string) => void | Promise<void>
   submitLabel?: string
-}): ReactElement | null {
+}): ReactElement {
+  const pk = getStripePublishableKey()
+  const [stripe, setStripe] = useState<Stripe | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (provider === 'mock') return
+    if (!pk) {
+      setLoadError('VITE_STRIPE_PUBLISHABLE_KEY non configurata sul frontend (serve rebuild del web).')
+      return
+    }
+    let cancelled = false
+    void loadStripe(pk).then((s) => {
+      if (cancelled) return
+      if (!s) {
+        setLoadError('loadStripe ha restituito null: chiave publishable non valida.')
+        return
+      }
+      setStripe(s)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [provider, pk])
+
   if (provider === 'mock') {
     return (
       <Stack gap="sm">
@@ -88,27 +172,27 @@ export function StripeSetupForm({
     )
   }
 
-  const pk = getStripePublishableKey()
-  const stripePromise = useMemo(() => (pk ? loadStripe(pk) : null), [pk])
-
-  if (!pk) {
+  if (loadError) {
     return (
       <Alert color="orange" variant="light">
-        La verifica carta non è disponibile su questo ambiente.
+        {loadError}
       </Alert>
     )
   }
 
-  if (!stripePromise) {
+  if (!stripe) {
     return (
-      <Alert color="red" variant="light">
-        Non è stato possibile caricare Stripe. Ricarica la pagina.
-      </Alert>
+      <Stack gap="sm" align="center" py="md">
+        <Loader color="dark" size="sm" />
+        <Text size="sm" c="dimmed">
+          Connessione a Stripe…
+        </Text>
+      </Stack>
     )
   }
 
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret, locale: 'it' }} key={clientSecret}>
+    <Elements stripe={stripe} options={{ clientSecret, locale: 'it' }} key={clientSecret}>
       <InnerSetup onCompleted={onCompleted} submitLabel={submitLabel} />
     </Elements>
   )
