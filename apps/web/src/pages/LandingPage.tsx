@@ -20,6 +20,10 @@ type Campaign = components['schemas']['Campaign']
 
 const { teal, mustard, orange, red, cream, ink, fontDisplay, fontBody } = founding
 
+const LANDING_VIDEO_URL =
+  import.meta.env.VITE_LANDING_VIDEO_URL?.trim() ||
+  'https://pub-a885598e7c0a43ef90ae3f111150b219.r2.dev/prova_con_metal.mp4'
+
 const IMG_COSA =
   'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1400&q=80'
 const IMG_PERCHE =
@@ -27,6 +31,7 @@ const IMG_PERCHE =
 
 export default function LandingPage(): ReactElement {
   const [campaign, setCampaign] = useState<Campaign | null>(null)
+  const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -95,43 +100,61 @@ export default function LandingPage(): ReactElement {
                 position: 'relative',
                 overflow: 'hidden',
               }}
-              role="img"
-              aria-label="Segnaposto video dimostrativo Sofu"
+              aria-label="Video dimostrativo Sofu"
             >
-              <Box
-                className="founding-soft-pulse"
-                aria-hidden
-                style={{
-                  position: 'absolute',
-                  width: 180,
-                  height: 180,
-                  borderRadius: '50%',
-                  background: 'rgba(247,241,230,0.12)',
-                }}
-              />
-              <Button
-                size="md"
-                radius="md"
-                leftSection={<IconPlayerPlay size={18} />}
-                styles={{
-                  root: {
-                    background: cream,
-                    color: teal,
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    fontSize: '0.75rem',
-                    fontFamily: fontBody,
-                    position: 'relative',
-                    zIndex: 1,
-                  },
-                }}
-                onClick={() => {
-                  /* Collegare qui l’URL del video demo */
-                }}
-              >
-                Play
-              </Button>
+              {playing ? (
+                <Box
+                  component="video"
+                  src={LANDING_VIDEO_URL}
+                  controls
+                  playsInline
+                  autoPlay
+                  preload="metadata"
+                  w="100%"
+                  h="100%"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    objectFit: 'contain',
+                    background: '#082834',
+                  }}
+                />
+              ) : (
+                <>
+                  <Box
+                    className="founding-soft-pulse"
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      width: 180,
+                      height: 180,
+                      borderRadius: '50%',
+                      background: 'rgba(247,241,230,0.12)',
+                    }}
+                  />
+                  <Button
+                    size="md"
+                    radius="md"
+                    leftSection={<IconPlayerPlay size={18} />}
+                    styles={{
+                      root: {
+                        background: cream,
+                        color: teal,
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        fontSize: '0.75rem',
+                        fontFamily: fontBody,
+                        position: 'relative',
+                        zIndex: 1,
+                      },
+                    }}
+                    onClick={() => setPlaying(true)}
+                  >
+                    Play
+                  </Button>
+                </>
+              )}
             </Box>
           </Stack>
         </Box>
