@@ -39,7 +39,7 @@
 }
 
 .sofu-c-root a {
-  color: var(--white);
+  color: var(--amber-100);
   text-decoration: none;
 }
 .sofu-c-root a:hover {
