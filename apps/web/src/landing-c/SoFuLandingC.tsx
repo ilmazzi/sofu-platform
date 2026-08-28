@@ -105,14 +105,7 @@ export default function SoFuLandingC({
                 <a href="#sostieni" className="sofu-c-btn-primary">
                   Sostieni SoFu
                 </a>
-                <a href="#video" className="sofu-c-btn-ghost">
-                  <span className="sofu-c-btn-ghost__icon">
-                    <svg width="11" height="12" viewBox="0 0 11 12" fill="none" aria-hidden="true">
-                      <path d="M1 1 L10 6 L1 11 Z" fill="oklch(96% 0.01 90)" />
-                    </svg>
-                  </span>
-                  Guarda il video
-                </a>
+                
               </div>
             </div>
 
