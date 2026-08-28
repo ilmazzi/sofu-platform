@@ -118,12 +118,7 @@ export default function RootLayout(): React.ReactElement {
         style={
           isLanding
             ? {
-                backgroundColor: '#15607a',
-                backgroundImage: [
-                  'radial-gradient(ellipse 90% 55% at 12% -10%, rgba(247,241,230,0.16), transparent 55%)',
-                  'radial-gradient(ellipse 70% 45% at 100% 20%, rgba(201,160,26,0.2), transparent 50%)',
-                  'radial-gradient(ellipse 60% 40% at 50% 100%, rgba(198,58,29,0.14), transparent 55%)',
-                ].join(', '),
+                backgroundColor: 'oklch(95.5% 0.012 80)',
                 minHeight: '100dvh',
               }
             : undefined

@@ -1,22 +1,16 @@
 import { type FormEvent, type ReactElement, useEffect, useId, useState } from 'react'
-import { Alert, Box, Button, NumberInput, Stack, Text, TextInput, Title } from '@mantine/core'
-import { IconCreditCard, IconUser } from '@tabler/icons-react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { components } from '@sofu/contracts'
 import { StripeSetupForm } from '../components/StripeSetupForm'
 import { useAuth } from '../context/AuthContext'
-import { FoundingBrand } from '../founding/FoundingBrand'
-import { FoundingCampaignPulse } from '../founding/FoundingCampaignPulse'
-import { FoundingCostBreakdown } from '../founding/FoundingCostBreakdown'
-import { FoundingShell } from '../founding/FoundingShell'
-import { founding } from '../founding/theme'
+import { SoFuCampaignCard } from '../landing-c/SoFuCampaignCard'
+import { SoFuCostBreakdown } from '../landing-c/SoFuCostBreakdown'
+import { SoFuPledgeShell } from '../landing-c/shared'
 import { apiFetch } from '../lib/api/client'
 import { formatEuro } from '../lib/campaignMetrics'
 
 type Campaign = components['schemas']['Campaign']
 type SetupIntent = components['schemas']['SetupIntent']
-
-const { cream, ink, fontDisplay, fontBody } = founding
 
 export default function FoundingPledgePage(): ReactElement {
   const navigate = useNavigate()
@@ -28,7 +22,7 @@ export default function FoundingPledgePage(): ReactElement {
   const [name, setName] = useState('')
   const [surname, setSurname] = useState('')
   const [email, setEmail] = useState('')
-  const [dropCount, setDropCount] = useState<number | string>(1)
+  const [dropCount, setDropCount] = useState('1')
   const [error, setError] = useState<string | null>(null)
   const [emailExists, setEmailExists] = useState(false)
   const [pending, setPending] = useState(false)
@@ -67,7 +61,6 @@ export default function FoundingPledgePage(): ReactElement {
     }
   }, [user])
 
-  // Chi ha già una promessa non ripassa da verifica carta: va allo stato.
   useEffect(() => {
     if (authLoading || !user) return
     let cancelled = false
@@ -90,7 +83,7 @@ export default function FoundingPledgePage(): ReactElement {
     setEmailExists(false)
     setPending(true)
 
-    const drops = typeof dropCount === 'number' ? dropCount : Number(dropCount)
+    const drops = Number(dropCount)
     if (!Number.isFinite(drops) || drops < 1) {
       setError('Indica almeno 1 quota.')
       setPending(false)
@@ -148,7 +141,7 @@ export default function FoundingPledgePage(): ReactElement {
   async function completePledge(setupIntentId: string): Promise<void> {
     setPending(true)
     setError(null)
-    const drops = typeof dropCount === 'number' ? dropCount : Number(dropCount)
+    const drops = Number(dropCount)
     const key = `founding-${idempotencyKey}-${drops}`
 
     try {
@@ -180,235 +173,173 @@ export default function FoundingPledgePage(): ReactElement {
     }
   }
 
+  const dropsNum = Number(dropCount) || 1
+
   return (
-    <FoundingShell>
-        <Stack gap="lg">
-          <Stack gap="xs" ta="center" className="founding-fade-up">
-            <Box className="founding-float">
-              <FoundingBrand size="md" />
-            </Box>
-            <Title
-              order={1}
-              c={cream}
-              fz={{ base: '1.45rem', sm: '1.85rem' }}
-              fw={650}
-              className="founding-fade-up founding-fade-up-delay-1"
-              style={{ letterSpacing: '-0.02em', fontFamily: fontDisplay }}
-            >
-              La tua promessa di quota
-            </Title>
-            <Text
-              c={cream}
-              size="sm"
-              maw={520}
-              mx="auto"
-              className="founding-fade-up founding-fade-up-delay-2"
-              style={{ opacity: 0.9, fontFamily: fontBody }}
-            >
-              Nessun addebito ora: verifichiamo la carta e registriamo l&apos;impegno. L&apos;incasso avviene solo se la
-              campagna raggiunge il goal.
-            </Text>
-          </Stack>
+    <SoFuPledgeShell
+      title="La tua promessa di quota"
+      subtitle="Nessun addebito ora: verifichiamo la carta e registriamo l'impegno. L'incasso avviene solo se la campagna raggiunge il goal."
+    >
+      {loadError ? <div className="sofu-c-alert sofu-c-alert--error">{loadError}</div> : null}
 
-          {loadError ? (
-            <Alert color="red" variant="filled">
-              {loadError}
-            </Alert>
-          ) : null}
+      {campaign ? <SoFuCampaignCard campaign={campaign} compact /> : null}
 
-          {campaign ? <FoundingCampaignPulse campaign={campaign} /> : null}
+      {campaign?.cost_items?.length ? (
+        <SoFuCostBreakdown
+          items={campaign.cost_items}
+          currency={campaign.currency}
+          totalCents={campaign.cost_subtotal_cents ?? campaign.total_amount_cents}
+        />
+      ) : null}
 
-          {campaign?.cost_items?.length ? (
-            <Box
-              p={{ base: 'lg', sm: 'xl' }}
-              style={{
-                background: cream,
-                borderRadius: 24,
-                color: ink,
-                boxShadow: '0 18px 40px rgba(8, 40, 52, 0.16)',
+      <div className="sofu-c-form-card">
+        {authLoading ? (
+          <p className="sofu-c-muted">Caricamento sessione…</p>
+        ) : step === 'form' ? (
+          <form onSubmit={(e) => void startPledge(e)} className="sofu-c-form-stack">
+            <h2 className="sofu-c-form-card__title">I tuoi dati</h2>
+            {!user ? (
+              <>
+                <div className="sofu-c-field">
+                  <label htmlFor="pledge-name">Nome</label>
+                  <input
+                    id="pledge-name"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="given-name"
+                  />
+                </div>
+                <div className="sofu-c-field">
+                  <label htmlFor="pledge-surname">Cognome</label>
+                  <input
+                    id="pledge-surname"
+                    required
+                    value={surname}
+                    onChange={(e) => setSurname(e.target.value)}
+                    autoComplete="family-name"
+                  />
+                </div>
+                <div className="sofu-c-field">
+                  <label htmlFor="pledge-email">Email</label>
+                  <input
+                    id="pledge-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="sofu-c-muted">
+                Sei connesso come <strong>{user.name}</strong> ({user.email}).{' '}
+                <Link to="/sostieni/stato" className="sofu-c-text-link">
+                  Vai al tuo impegno
+                </Link>
+              </p>
+            )}
+
+            <div className="sofu-c-field">
+              <label htmlFor="pledge-drops">Numero di quote</label>
+              <input
+                id="pledge-drops"
+                type="number"
+                min={1}
+                max={10000}
+                required
+                value={dropCount}
+                onChange={(e) => setDropCount(e.target.value)}
+              />
+            </div>
+
+            {campaign ? (
+              <p className="sofu-c-muted">
+                Impegno stimato ora:{' '}
+                <strong>
+                  {formatEuro(campaign.current_price_cents * dropsNum, campaign.currency)}
+                </strong>{' '}
+                (può scendere se arrivano altre quote)
+              </p>
+            ) : null}
+
+            {error ? (
+              <div className="sofu-c-alert sofu-c-alert--error">
+                {alreadyPledged ? 'Hai già una promessa attiva per questa campagna.' : error}
+                {emailExists ? (
+                  <>
+                    {' '}
+                    <Link to="/login?next=/sostieni" className="sofu-c-text-link">
+                      Accedi
+                    </Link>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+
+            {alreadyPledged ? (
+              <Link to="/sostieni/stato" className="sofu-c-cta__submit">
+                Vai al tuo impegno
+              </Link>
+            ) : (
+              <button type="submit" className="sofu-c-cta__submit" disabled={pending}>
+                {pending ? 'Attendere…' : 'Continua con la carta'}
+              </button>
+            )}
+
+            {!user ? (
+              <p className="sofu-c-muted" style={{ textAlign: 'center' }}>
+                Hai già sostenuto?{' '}
+                <Link to="/login?next=/sostieni/stato" className="sofu-c-text-link">
+                  Accedi al tuo impegno
+                </Link>
+              </p>
+            ) : null}
+          </form>
+        ) : setup ? (
+          <div className="sofu-c-form-stack">
+            <h2 className="sofu-c-form-card__title">Verifica la carta</h2>
+            <p className="sofu-c-muted">
+              Non addebitiamo nulla adesso. Salviamo solo un metodo di pagamento valido per la
+              promessa.
+            </p>
+            {error ? (
+              <div className="sofu-c-alert sofu-c-alert--error">
+                {alreadyPledged ? 'Hai già una promessa attiva per questa campagna.' : error}
+              </div>
+            ) : null}
+            {alreadyPledged ? (
+              <Link to="/sostieni/stato" className="sofu-c-cta__submit">
+                Vai al tuo impegno
+              </Link>
+            ) : (
+              <StripeSetupForm
+                provider={setup.provider}
+                clientSecret={setup.client_secret}
+                setupIntentId={setup.setup_intent_id}
+                onCompleted={completePledge}
+                submitLabel="Conferma e sostieni SoFu"
+              />
+            )}
+            <button
+              type="button"
+              className="sofu-c-btn-back"
+              onClick={() => {
+                setStep('form')
+                setSetup(null)
+                setError(null)
               }}
             >
-              <FoundingCostBreakdown
-                items={campaign.cost_items}
-                currency={campaign.currency}
-                totalCents={campaign.cost_subtotal_cents ?? campaign.total_amount_cents}
-              />
-            </Box>
-          ) : null}
+              Indietro
+            </button>
+          </div>
+        ) : null}
+      </div>
 
-          <Box
-            p={{ base: 'lg', sm: 'xl' }}
-            style={{
-              background: cream,
-              borderRadius: 24,
-              color: ink,
-              boxShadow: '0 18px 40px rgba(8, 40, 52, 0.16)',
-              animation: 'foundingFadeUp 0.55s ease 0.05s both',
-            }}
-          >
-            {authLoading ? (
-              <Text size="sm" style={{ fontFamily: fontBody }}>
-                Caricamento sessione…
-              </Text>
-            ) : step === 'form' ? (
-              <form onSubmit={(e) => void startPledge(e)}>
-                <Stack gap="md">
-                  <Title order={2} fz="1.35rem" c={ink} style={{ fontFamily: fontDisplay }}>
-                    <Box component="span" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      <IconUser size={22} stroke={1.7} />
-                      I tuoi dati
-                    </Box>
-                  </Title>
-                  {!user ? (
-                    <>
-                      <TextInput
-                        label="Nome"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.currentTarget.value)}
-                      />
-                      <TextInput
-                        label="Cognome"
-                        required
-                        value={surname}
-                        onChange={(e) => setSurname(e.currentTarget.value)}
-                      />
-                      <TextInput
-                        label="Email"
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.currentTarget.value)}
-                      />
-                    </>
-                  ) : (
-                    <Stack gap={4}>
-                      <Text size="sm">
-                        Sei connesso come <strong>{user.name}</strong> ({user.email}).
-                      </Text>
-                      <Text size="sm">
-                        <Link to="/sostieni/stato">Hai già sostenuto? Vai al tuo impegno</Link>
-                      </Text>
-                    </Stack>
-                  )}
-                  <NumberInput
-                    label="Numero di quote"
-                    min={1}
-                    max={10000}
-                    value={dropCount}
-                    onChange={setDropCount}
-                    required
-                  />
-                  {campaign ? (
-                    <Text size="sm" c="dimmed">
-                      Impegno stimato ora:{' '}
-                      <strong>
-                        {formatEuro(
-                          campaign.current_price_cents *
-                            (typeof dropCount === 'number' ? dropCount : Number(dropCount) || 1),
-                          campaign.currency,
-                        )}
-                      </strong>{' '}
-                      (può scendere se arrivano altre quote)
-                    </Text>
-                  ) : null}
-                  {error ? (
-                    <Alert color="red" variant="light">
-                      {alreadyPledged
-                        ? 'Hai già una promessa attiva per questa campagna.'
-                        : error}
-                      {emailExists ? (
-                        <>
-                          {' '}
-                          <Link to="/login?next=/sostieni">Accedi</Link>
-                        </>
-                      ) : null}
-                    </Alert>
-                  ) : null}
-                  {alreadyPledged ? (
-                    <Button component={Link} to="/sostieni/stato" color="dark" size="md" fullWidth>
-                      Vai al tuo impegno
-                    </Button>
-                  ) : (
-                    <Button type="submit" color="dark" size="md" fullWidth loading={pending}>
-                      Continua con la carta
-                    </Button>
-                  )}
-                  {!user ? (
-                    <Text size="sm" ta="center" c="dimmed">
-                      Hai già sostenuto?{' '}
-                      <Link to="/login?next=/sostieni/stato">Accedi al tuo impegno</Link>
-                    </Text>
-                  ) : null}
-                </Stack>
-              </form>
-            ) : setup ? (
-              <Stack gap="md">
-                <Title order={2} fz="1.35rem" c={ink} style={{ fontFamily: fontDisplay }}>
-                  <Box component="span" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <IconCreditCard size={22} stroke={1.7} />
-                    Verifica la carta
-                  </Box>
-                </Title>
-                <Text size="sm">
-                  Non addebitiamo nulla adesso. Salviamo solo un metodo di pagamento valido per la promessa.
-                </Text>
-                {error ? (
-                  <Alert color="red" variant="light">
-                    {alreadyPledged
-                      ? 'Hai già una promessa attiva per questa campagna.'
-                      : error}
-                  </Alert>
-                ) : null}
-                {alreadyPledged ? (
-                  <Button component={Link} to="/sostieni/stato" color="dark" size="md" fullWidth>
-                    Vai al tuo impegno
-                  </Button>
-                ) : (
-                  <StripeSetupForm
-                    provider={setup.provider}
-                    clientSecret={setup.client_secret}
-                    setupIntentId={setup.setup_intent_id}
-                    onCompleted={completePledge}
-                    submitLabel="Conferma e sostieni SoFu"
-                  />
-                )}
-                <Button
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => {
-                    setStep('form')
-                    setSetup(null)
-                    setError(null)
-                  }}
-                >
-                  Indietro
-                </Button>
-              </Stack>
-            ) : null}
-          </Box>
-
-          <Button
-            component={Link}
-            to="/"
-            variant="subtle"
-            fullWidth
-            styles={{
-              root: {
-                color: cream,
-                fontFamily: fontBody,
-                fontWeight: 600,
-                background: 'transparent',
-                '&:hover': {
-                  background: 'rgba(247,241,230,0.14)',
-                  color: cream,
-                },
-              },
-            }}
-          >
-            Torna alla landing
-          </Button>
-        </Stack>
-    </FoundingShell>
+      <Link to="/" className="sofu-c-btn-back">
+        Torna alla landing
+      </Link>
+    </SoFuPledgeShell>
   )
 }

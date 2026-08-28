@@ -1,0 +1,1265 @@
+/*
+  SoFuLandingC.css
+  Companion stylesheet for SoFuLandingC.tsx — "Warm Human" direction.
+  Uses CSS custom properties so the palette/type can be retuned without touching
+  component logic. Fonts assume Bricolage Grotesque + Figtree are already loaded
+  globally (as they are on the current site) — adjust the font stack below if not.
+  Brand teal is driven by a single hex (--teal-base): every other teal shade is
+  derived from it via color-mix(), so retuning the brand color means editing one line.
+*/
+
+.sofu-c-root {
+  --paper-alt: oklch(95.5% 0.012 80);
+  --teal-base: #20867c;
+  --teal-100: color-mix(in oklch, var(--teal-base) 12%, white 88%);
+  --teal-700: var(--teal-base);
+  --teal-600: color-mix(in oklch, var(--teal-base) 82%, white 18%);
+  --teal-900: color-mix(in oklch, var(--teal-base) 80%, black 20%);
+  --teal-950: color-mix(in oklch, var(--teal-base) 65%, black 35%);
+  --card: oklch(100% 0 0);
+  --ink: oklch(22% 0.02 250);
+  --ink-soft: oklch(42% 0.02 250);
+  --line: oklch(89% 0.012 90);
+  --amber-700: oklch(55% 0.14 55);
+  --amber-600: oklch(62% 0.14 68);
+  --amber-500: oklch(70% 0.135 75);
+  --amber-100: oklch(94% 0.03 75);
+  --muted: oklch(60% 0.01 90);
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Figtree", ui-sans-serif, system-ui, sans-serif;
+
+  color: var(--ink);
+  background: var(--paper-alt);
+  font-family: var(--font-body);
+}
+
+.sofu-c-root * {
+  box-sizing: border-box;
+}
+
+.sofu-c-root a {
+  color: var(--amber-700);
+  text-decoration: none;
+}
+.sofu-c-root a:hover {
+  color: var(--amber-600);
+}
+
+.sofu-c-root p {
+  margin: 0;
+}
+
+.sofu-c-display {
+  font-family: var(--font-display);
+}
+
+/* ---------- Sticky nav ---------- */
+/* Transparent + non-interactive over the hero; gains a background, shadow
+   and its own CTA once the page scrolls past the hero brand mark
+   (driven by useScrolled in the component). */
+.sofu-c-sticky-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 14px 40px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 8px 24px -16px oklch(20% 0.05 174 / 0.25);
+  pointer-events: none;
+  /* Hidden state: the whole bar slides up out of view — a clearer, more
+     visible entrance than a background-only fade. */
+  transform: translateY(-100%);
+  transition: transform 0.4s cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+.sofu-c-sticky-nav.is-scrolled {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.sofu-c-sticky-nav__inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sofu-c-sticky-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sofu-c-sticky-nav__mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--amber-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-inline: 2px;
+}
+
+.sofu-c-hero__brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--amber-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 3px;
+}
+
+.sofu-c-sticky-nav__name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Specificity note: `.sofu-c-root a` (below) resets link color for plain
+   inline text links. It's a class+element selector, so a lone button class
+   like `.sofu-c-sticky-nav__cta` alone would actually lose to it — hence
+   the `.sofu-c-root` prefix here and on the other button/pill components,
+   to guarantee their own color always wins regardless of source order. */
+.sofu-c-root .sofu-c-sticky-nav__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: var(--teal-700);
+  color: var(--card);
+  font-weight: 700;
+  font-size: 13.5px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.sofu-c-sticky-nav__cta:hover {
+  background: color-mix(in oklch, var(--teal-700) 90%, black 10%);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-sticky-nav {
+    transition: none;
+  }
+}
+
+/* ---------- Hero ---------- */
+.sofu-c-hero {
+  position: relative;
+  padding: 64px 40px 100px 40px;
+  overflow: hidden;
+  background: radial-gradient(
+    120% 140% at 15% -10%,
+    var(--teal-600) 0%,
+    var(--teal-900) 45%,
+    var(--teal-950) 100%
+  );
+}
+
+.sofu-c-hero__blob-a {
+  position: absolute;
+  top: -180px;
+  right: -120px;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: oklch(100% 0 0 / 0.06);
+  animation: sofu-c-blob-float-a 11s ease-in-out infinite;
+}
+
+.sofu-c-hero__blob-b {
+  position: absolute;
+  bottom: -220px;
+  left: -140px;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  background: oklch(100% 0 0 / 0.06);
+  animation: sofu-c-blob-float-b 9s ease-in-out infinite;
+}
+
+/* Slow, gentle drift — never enough to distract, just enough that the hero
+   background doesn't feel frozen. Different paths/durations per blob so
+   they don't move in lockstep. */
+@keyframes sofu-c-blob-float-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-24px, 20px) scale(1.06);
+  }
+}
+@keyframes sofu-c-blob-float-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(22px, -18px) scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-hero__blob-a,
+  .sofu-c-hero__blob-b {
+    animation: none;
+  }
+}
+
+/* Big pale silhouette of the real SoFu logo, sitting behind all hero
+   content — the "in trasparenza nella parte colorata" watermark. Given a
+   slow continuous drift + breathing opacity so it reads as alive, not just
+   a static background. */
+.sofu-c-hero__watermark {
+  position: absolute;
+  top: 50%;
+  right: -60px;
+  height: 760px;
+  width: auto;
+  color: oklch(98% 0.006 90);
+  opacity: 0.14;
+  pointer-events: none;
+  user-select: none;
+  animation: sofu-c-watermark-drift 10s ease-in-out infinite;
+}
+@keyframes sofu-c-watermark-drift {
+  0% {
+    transform: translateY(-52%) scale(1);
+    opacity: 0.13;
+  }
+  50% {
+    transform: translateY(-48%) scale(1.035);
+    opacity: 0.19;
+  }
+  100% {
+    transform: translateY(-52%) scale(1);
+    opacity: 0.13;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-hero__watermark {
+    animation: none;
+    transform: translateY(-50%);
+    opacity: 0.16;
+  }
+}
+
+.sofu-c-hero__inner {
+  position: relative;
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sofu-c-hero__brand {
+  display: flex;
+  align-items: center;
+  margin-bottom: 64px;
+}
+
+/* Text and video side by side — the video is visible the instant the page
+   loads, no scrolling needed. Collapses to a single column on small
+   screens (video above text there, see the responsive block at the end). */
+.sofu-c-hero__row {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: 56px;
+  align-items: center;
+}
+
+.sofu-c-hero__content {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.sofu-c-hero__media {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sofu-c-hero__media .sofu-c-video__caption {
+  color: oklch(88% 0.015 90);
+  text-align: center;
+}
+
+.sofu-c-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: oklch(100% 0 0 / 0.12);
+  border: 1px solid oklch(100% 0 0 / 0.2);
+  font-size: 13px;
+  font-weight: 700;
+  color: oklch(96% 0.01 90);
+  width: fit-content;
+}
+
+.sofu-c-hero__title {
+  margin: 0;
+  font-size: 54px;
+  line-height: 1.14;
+  font-weight: 700;
+  color: oklch(98% 0.006 90);
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+
+.sofu-c-hero__subtitle {
+  font-size: 18.5px;
+  line-height: 1.65;
+  color: oklch(90% 0.015 90);
+  max-width: 540px;
+  margin: 0;
+}
+
+.sofu-c-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* Staggered entrance on load — badge, title, subtitle, actions "lock into
+   place" one after another instead of all appearing at once. */
+@keyframes sofu-c-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* The badge gets its own bouncier "pop" keyframe instead of the plain
+   slide-fade — a small overshoot on scale reads as a distinct entrance. */
+@keyframes sofu-c-badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(10px);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.sofu-c-hero__title,
+.sofu-c-hero__subtitle,
+.sofu-c-hero__actions,
+.sofu-c-hero__media {
+  animation: sofu-c-hero-in 0.8s cubic-bezier(0.16, 0.84, 0.44, 1) both;
+}
+.sofu-c-hero__badge {
+  animation: sofu-c-badge-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0.05s;
+}
+.sofu-c-hero__title {
+  animation-delay: 0.16s;
+}
+.sofu-c-hero__subtitle {
+  animation-delay: 0.3s;
+}
+.sofu-c-hero__actions {
+  animation-delay: 0.44s;
+}
+.sofu-c-hero__media {
+  animation-delay: 0.32s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-hero__badge,
+  .sofu-c-hero__title,
+  .sofu-c-hero__subtitle,
+  .sofu-c-hero__actions,
+  .sofu-c-hero__media {
+    animation: none;
+  }
+}
+
+.sofu-c-root .sofu-c-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 30px;
+  background: var(--amber-600);
+  color: var(--card);
+  font-weight: 700;
+  font-size: 15.5px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.sofu-c-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -10px oklch(15% 0.02 208 / 0.4);
+  background: color-mix(in oklch, var(--amber-600) 88%, white 12%);
+}
+.sofu-c-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.sofu-c-root .sofu-c-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  color: oklch(94% 0.01 90);
+}
+
+.sofu-c-btn-ghost__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: oklch(100% 0 0 / 0.12);
+  border: 1px solid oklch(100% 0 0 / 0.3);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.sofu-c-btn-ghost:hover .sofu-c-btn-ghost__icon {
+  transform: scale(1.08);
+  background: oklch(100% 0 0 / 0.2);
+}
+
+/* ---------- Video (now embedded in the hero — see .sofu-c-hero__media) ---------- */
+
+.sofu-c-video__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 28px;
+  background: #082834;
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 40px -24px oklch(30% 0.05 174 / 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.sofu-c-video__poster,
+.sofu-c-video__el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 28px;
+  display: block;
+}
+
+.sofu-c-video__el--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sofu-c-video__frame.is-playing {
+  cursor: default;
+}
+
+.sofu-c-video__frame.is-playing .sofu-c-video__el {
+  object-fit: contain;
+  background: #082834;
+}
+.sofu-c-video__frame:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 28px 48px -24px oklch(30% 0.05 174 / 0.35);
+}
+
+.sofu-c-video__play {
+  position: absolute;
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--teal-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease;
+}
+.sofu-c-video__frame:hover .sofu-c-video__play {
+  transform: scale(1.1);
+}
+/* Ripple rings on their own pseudo-elements (not the play button itself) so
+   the continuous pulse never fights with the hover scale above — both
+   animate `transform`, but on different elements. Two rings, offset in
+   time, in amber for contrast against the teal button — much easier to
+   spot than a single thin teal ring. */
+.sofu-c-video__play::after,
+.sofu-c-video__play::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--amber-600);
+  animation: sofu-c-ping 2.2s cubic-bezier(0, 0.4, 0.3, 1) infinite;
+}
+.sofu-c-video__play::before {
+  animation-delay: 1.1s;
+}
+@keyframes sofu-c-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  75%,
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-video__play::after,
+  .sofu-c-video__play::before {
+    animation: none;
+    display: none;
+  }
+}
+
+.sofu-c-video__caption {
+  font-size: 15px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* ---------- Content sections ---------- */
+.sofu-c-section {
+  padding: 88px 40px;
+}
+
+.sofu-c-section--card {
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.sofu-c-section__grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 64px;
+  align-items: center;
+}
+
+.sofu-c-section__grid--reverse .sofu-c-section__graphic {
+  order: 1;
+}
+.sofu-c-section__grid--reverse .sofu-c-section__text {
+  order: 2;
+}
+
+.sofu-c-section__text {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sofu-c-section__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  width: fit-content;
+  /* Pops in with a small overshoot once the parent section reveals — the
+     bezier's >1 value is what creates the bounce. */
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.45s ease 0.1s,
+    transform 0.55s cubic-bezier(0.34, 1.7, 0.64, 1) 0.1s;
+}
+.sofu-reveal.is-visible .sofu-c-section__tag {
+  opacity: 1;
+  transform: scale(1);
+}
+.sofu-c-section__tag--teal {
+  color: var(--teal-700);
+}
+.sofu-c-section__tag--amber {
+  color: var(--amber-700);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-section__tag {
+    transition: none;
+  }
+}
+
+.sofu-c-section__heading {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sofu-c-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.sofu-c-section__body strong {
+  color: var(--ink);
+}
+
+.sofu-c-section__graphic {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 24px;
+  background: var(--paper-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sofu-c-section__graphic--card {
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.sofu-c-section__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* Soft fade + scale-down-to-rest reveal, timed with the rest of the
+     section's sofu-reveal fade/slide (see .sofu-reveal below). */
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 0.8s ease 0.15s, transform 0.9s cubic-bezier(0.16, 0.84, 0.44, 1) 0.15s;
+}
+.sofu-reveal.is-visible .sofu-c-section__photo {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---------- Cost breakdown ---------- */
+.sofu-c-mechanism {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.sofu-c-mechanism__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 700px;
+}
+
+.sofu-c-mechanism__intro p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.sofu-c-costs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sofu-c-cost-pill {
+  background: var(--paper-alt);
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sofu-c-cost-pill--total {
+  background: var(--teal-100);
+}
+
+.sofu-c-cost-pill__label {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+}
+.sofu-c-cost-pill--total .sofu-c-cost-pill__label {
+  color: var(--teal-700);
+}
+
+.sofu-c-cost-pill__value {
+  font-weight: 700;
+  font-size: 15px;
+}
+.sofu-c-cost-pill--total .sofu-c-cost-pill__value {
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--teal-700);
+}
+
+/* ---------- Scenario cards ---------- */
+.sofu-c-scenarios {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.sofu-c-scenario-card {
+  background: var(--paper-alt);
+  border-radius: 20px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Hover lift uses the standalone `translate` property (not `transform`) so it
+   doesn't fight with .sofu-reveal's transform-based slide-up transition — see
+   the combined .sofu-c-scenario-card.sofu-reveal rule below for the timing. */
+.sofu-c-scenario-card:hover {
+  translate: 0 -4px;
+  box-shadow: 0 20px 32px -20px oklch(25% 0.03 208 / 0.3);
+}
+
+.sofu-c-scenario-card--goal {
+  background: var(--teal-100);
+}
+
+.sofu-c-scenario-card--power {
+  background: var(--teal-700);
+}
+.sofu-c-scenario-card--power:hover {
+  box-shadow: 0 20px 32px -18px oklch(20% 0.05 174 / 0.5);
+}
+
+/* Auto-highlight sweep (useCycle in the component) — a ring + lift lands on
+   one card at a time so the eye is guided across all three in sequence. */
+.sofu-c-scenario-card--active {
+  translate: 0 -4px;
+  box-shadow: 0 0 0 3px var(--amber-500), 0 22px 34px -18px oklch(25% 0.03 208 / 0.35);
+}
+.sofu-c-scenario-card--power.sofu-c-scenario-card--active {
+  box-shadow: 0 0 0 3px var(--amber-500), 0 22px 34px -16px oklch(20% 0.05 174 / 0.55);
+}
+
+.sofu-c-scenario-card__value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.sofu-c-scenario-card--goal .sofu-c-scenario-card__value {
+  color: var(--teal-700);
+}
+.sofu-c-scenario-card--power .sofu-c-scenario-card__value {
+  color: var(--card);
+}
+
+.sofu-c-scenario-card__text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.sofu-c-scenario-card--goal .sofu-c-scenario-card__text {
+  color: var(--ink);
+}
+.sofu-c-scenario-card--power .sofu-c-scenario-card__text {
+  color: oklch(94% 0.015 174);
+}
+
+/* ---------- Campaign CTA ---------- */
+.sofu-c-cta {
+  position: relative;
+  padding: 96px 40px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(
+    120% 140% at 85% 115%,
+    var(--teal-600) 0%,
+    var(--teal-900) 45%,
+    var(--teal-950) 100%
+  );
+}
+
+/* Same watermark treatment as the hero, tucked in the opposite corner so it
+   stays clear of the floating white card. */
+.sofu-c-cta__watermark {
+  position: absolute;
+  top: -60px;
+  left: -70px;
+  height: 460px;
+  width: auto;
+  color: oklch(98% 0.006 90);
+  opacity: 0.13;
+  pointer-events: none;
+  user-select: none;
+  animation: sofu-c-watermark-drift 10s ease-in-out infinite;
+  animation-delay: -3s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-cta__watermark {
+    animation: none;
+    opacity: 0.15;
+  }
+}
+
+.sofu-c-cta__card {
+  max-width: 800px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 32px;
+  padding: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  box-shadow: 0 30px 60px -32px oklch(15% 0.02 208 / 0.45);
+}
+
+.sofu-c-cta__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.sofu-c-cta__eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal-700);
+}
+
+.sofu-c-cta__title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sofu-c-cta__missing {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+}
+
+.sofu-c-cta__ring-wrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+
+.sofu-c-cta__ring-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sofu-c-cta__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--paper-alt);
+  overflow: hidden;
+}
+
+.sofu-c-cta__fill {
+  height: 100%;
+  background: var(--teal-700);
+}
+
+.sofu-c-cta__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sofu-c-cta__stat {
+  background: var(--paper-alt);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.sofu-c-cta__stat--accent {
+  background: var(--amber-100);
+}
+
+.sofu-c-cta__stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sofu-c-cta__stat--accent .sofu-c-cta__stat-label {
+  color: var(--amber-700);
+}
+
+.sofu-c-cta__stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.sofu-c-cta__stat--accent .sofu-c-cta__stat-value {
+  color: var(--amber-700);
+}
+
+.sofu-c-cta__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.sofu-c-cta__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 18px;
+  background: var(--teal-700);
+  color: var(--card);
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.sofu-c-cta__submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px -12px oklch(20% 0.05 174 / 0.5);
+  background: color-mix(in oklch, var(--teal-700) 90%, black 10%);
+}
+.sofu-c-cta__submit:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.sofu-c-cta__login {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.sofu-c-root a.sofu-c-cta__login {
+  color: var(--ink-soft);
+}
+.sofu-c-cta__login:hover {
+  color: var(--teal-700);
+}
+
+/* ---------- Footer ---------- */
+.sofu-c-footer {
+  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: 1080px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.sofu-c-footer__brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sofu-c-footer__meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---------- Scroll reveal ---------- */
+.sofu-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 0.84, 0.44, 1),
+    transform 0.7s cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+.sofu-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .sofu-c-section__photo {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Scenario cards carry both .sofu-reveal (mount-in fade/slide, via `transform`)
+   and a hover lift (via the separate `translate` property, see above) — this
+   compound selector's higher specificity ensures both transitions apply
+   together instead of one `transition` shorthand clobbering the other. */
+.sofu-c-scenario-card.sofu-reveal {
+  transition: opacity 0.7s cubic-bezier(0.16, 0.84, 0.44, 1),
+    transform 0.7s cubic-bezier(0.16, 0.84, 0.44, 1), translate 0.25s ease,
+    box-shadow 0.25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sofu-c-scenario-card:hover {
+    translate: none;
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+  .sofu-c-hero__title {
+    font-size: 38px;
+  }
+  .sofu-c-section__grid,
+  .sofu-c-hero__row {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .sofu-c-section__grid--reverse .sofu-c-section__graphic {
+    order: 2;
+  }
+  .sofu-c-section__grid--reverse .sofu-c-section__text {
+    order: 1;
+  }
+  .sofu-c-costs-grid,
+  .sofu-c-scenarios {
+    grid-template-columns: 1fr;
+  }
+  .sofu-c-cta__stats {
+    grid-template-columns: 1fr;
+  }
+  .sofu-c-hero__watermark {
+    height: 340px;
+    opacity: 0.045;
+  }
+}
+
+/* ---------- Pledge / status sub-pages ---------- */
+.sofu-c-hero--sub {
+  padding: 48px 40px 72px;
+}
+
+.sofu-c-hero--sub .sofu-c-hero__brand {
+  margin-bottom: 32px;
+}
+
+.sofu-c-hero--sub .sofu-c-hero__title {
+  font-size: 38px;
+  max-width: 640px;
+}
+
+.sofu-c-hero--sub .sofu-c-hero__subtitle {
+  max-width: 560px;
+}
+
+.sofu-c-page {
+  padding: 0 40px 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.sofu-c-page__inner {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sofu-c-form-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 40px 44px;
+  box-shadow: 0 24px 48px -28px oklch(15% 0.02 208 / 0.35);
+}
+
+.sofu-c-form-card__title {
+  margin: 0 0 20px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sofu-c-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sofu-c-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.sofu-c-field input,
+.sofu-c-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sofu-c-field input:focus,
+.sofu-c-field select:focus {
+  outline: none;
+  border-color: var(--teal-700);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--teal-base) 18%, transparent);
+}
+
+.sofu-c-alert {
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sofu-c-alert--error {
+  background: oklch(96% 0.04 25);
+  color: oklch(42% 0.12 25);
+  border: 1px solid oklch(88% 0.06 25);
+}
+
+.sofu-c-alert--success {
+  background: var(--teal-100);
+  color: var(--teal-950);
+  border: 1px solid color-mix(in oklch, var(--teal-base) 25%, white);
+}
+
+.sofu-c-muted {
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.sofu-c-root .sofu-c-text-link {
+  color: var(--teal-700);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sofu-c-root .sofu-c-text-link:hover {
+  color: var(--teal-950);
+}
+
+.sofu-c-root .sofu-c-btn-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.sofu-c-btn-back:hover {
+  color: var(--teal-700);
+  background: var(--paper-alt);
+}
+
+.sofu-c-root .sofu-c-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 1px solid oklch(78% 0.08 25);
+  background: transparent;
+  color: oklch(48% 0.12 25);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sofu-c-btn-outline:hover {
+  background: oklch(96% 0.04 25);
+}
+
+.sofu-c-status-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.sofu-c-status-row strong {
+  color: var(--ink);
+}
+
+.sofu-c-status-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 8px 0;
+}
+
+@media (max-width: 860px) {
+  .sofu-c-hero--sub .sofu-c-hero__title {
+    font-size: 30px;
+  }
+
+  .sofu-c-page {
+    padding-inline: 20px;
+  }
+
+  .sofu-c-form-card {
+    padding: 28px 24px;
+  }
+}
