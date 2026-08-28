@@ -173,6 +173,7 @@
   border-radius: 50%;
   background: oklch(100% 0 0 / 0.06);
   animation: sofu-c-blob-float-a 11s ease-in-out infinite;
+  z-index: 0;
 }
 
 .sofu-c-hero__blob-b {
@@ -184,6 +185,7 @@
   border-radius: 50%;
   background: oklch(100% 0 0 / 0.06);
   animation: sofu-c-blob-float-b 9s ease-in-out infinite;
+  z-index: 0;
 }
 
 /* Slow, gentle drift — never enough to distract, just enough that the hero
@@ -214,46 +216,45 @@
   }
 }
 
-/* Big pale silhouette of the real SoFu logo, sitting behind all hero
-   content — the "in trasparenza nella parte colorata" watermark. Given a
-   slow continuous drift + breathing opacity so it reads as alive, not just
-   a static background. */
+/* Watermark decorativo — desktop: sinistra, dentro al padding (S visibile). */
 .sofu-c-hero__watermark {
   position: absolute;
-  top: 50%;
-  right: -60px;
-  height: 760px;
+  top: 64px;
+  left: 40px;
+  right: auto;
+  height: 500px;
   width: auto;
+  max-width: min(480px, 46vw);
   color: oklch(98% 0.006 90);
-  opacity: 0.14;
+  opacity: 0.12;
   pointer-events: none;
   user-select: none;
-  animation: sofu-c-watermark-drift 10s ease-in-out infinite;
+  z-index: 0;
+  animation: sofu-c-hero-watermark-left-drift 11s ease-in-out infinite;
 }
-@keyframes sofu-c-watermark-drift {
-  0% {
-    transform: translateY(-52%) scale(1);
-    opacity: 0.13;
+
+@keyframes sofu-c-hero-watermark-left-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.1;
   }
   50% {
-    transform: translateY(-48%) scale(1.035);
-    opacity: 0.19;
-  }
-  100% {
-    transform: translateY(-52%) scale(1);
-    opacity: 0.13;
+    transform: translate(12px, 14px) scale(1.025);
+    opacity: 0.14;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .sofu-c-hero__watermark {
     animation: none;
-    transform: translateY(-50%);
-    opacity: 0.16;
+    opacity: 0.12;
   }
 }
 
 .sofu-c-hero__inner {
   position: relative;
+  z-index: 1;
   max-width: 1180px;
   margin: 0 auto;
   display: flex;
@@ -1094,8 +1095,13 @@
     grid-template-columns: 1fr;
   }
   .sofu-c-hero__watermark {
-    height: 340px;
-    opacity: 0.045;
+    top: auto;
+    bottom: 16px;
+    right: -56px;
+    left: auto;
+    height: 240px;
+    opacity: 0.1;
+    animation: sofu-c-cta-watermark-drift 10s ease-in-out infinite;
   }
 }
 
