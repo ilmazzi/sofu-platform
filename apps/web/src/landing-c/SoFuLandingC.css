@@ -43,7 +43,7 @@
   text-decoration: none;
 }
 .sofu-c-root a:hover {
-  color: var(--amber-600);
+  color: var(--amber-100);
 }
 
 .sofu-c-root p {
