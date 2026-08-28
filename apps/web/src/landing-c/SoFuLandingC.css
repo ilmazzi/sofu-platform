@@ -806,25 +806,38 @@
   );
 }
 
-/* Same watermark treatment as the hero, tucked in the opposite corner so it
-   stays clear of the floating white card. */
+/* Watermark in basso a sinistra — animazione dedicata (non quella dell'hero
+   che usa translateY(-52%) e taglierebbe il logo in alto). */
 .sofu-c-cta__watermark {
   position: absolute;
-  top: -60px;
-  left: -70px;
-  height: 460px;
+  top: 48px;
+  left: -24px;
+  height: 420px;
   width: auto;
   color: oklch(98% 0.006 90);
   opacity: 0.13;
   pointer-events: none;
   user-select: none;
-  animation: sofu-c-watermark-drift 10s ease-in-out infinite;
+  animation: sofu-c-cta-watermark-drift 10s ease-in-out infinite;
   animation-delay: -3s;
 }
+
+@keyframes sofu-c-cta-watermark-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.12;
+  }
+  50% {
+    transform: translate(14px, 10px) scale(1.03);
+    opacity: 0.16;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sofu-c-cta__watermark {
     animation: none;
-    opacity: 0.15;
+    opacity: 0.14;
   }
 }
 
