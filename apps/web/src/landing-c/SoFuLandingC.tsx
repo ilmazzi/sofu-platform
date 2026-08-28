@@ -318,11 +318,11 @@ export default function SoFuLandingC({
             </div>
             <div className="sofu-c-cta__actions">
               {onSostieni ? (
-                <button type="button" className="sofu-c-cta__submit" onClick={onSostieni}>
+                <button type="button" className="sofu-c-cta__submit " onClick={onSostieni}>
                   Sostieni SoFu
                 </button>
               ) : (
-                <Link to="/sostieni" className="sofu-c-cta__submit">
+                <Link to="/sostieni" className="sofu-c-cta__submit ">
                   Sostieni SoFu
                 </Link>
               )}
