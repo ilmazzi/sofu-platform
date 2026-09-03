@@ -35,7 +35,9 @@ export function SoFuStickyNav({
 export function SoFuFooter(): ReactElement {
   return (
     <footer className="sofu-c-footer">
-      <span className="sofu-c-display sofu-c-footer__brand-name">SoFu</span>
+      <span className="sofu-c-display sofu-c-footer__brand-name">
+        <SoFuLogoFull height={34} color="var(--ink)" />
+      </span>
       <span className="sofu-c-footer__meta">
       2026 SoFu - Una piattaforma di crowdfunding per la comunità
       </span>
