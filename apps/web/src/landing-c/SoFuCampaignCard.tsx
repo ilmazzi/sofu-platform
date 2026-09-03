@@ -84,7 +84,7 @@ export function SoFuCampaignCard({
           <Stat label="Quota attuale" value={formatLandingEuro(quotaAttuale)} />
           <Stat label="Obiettivo" value={formatLandingEuro(obiettivo)} />
           <Stat label="Quota iniziale" value={formatLandingEuro(maxQuota)} />
-          <Stat label="Può scendere a" value={formatLandingEuro(minQuota)} accent />
+          <Stat label="Può scendere fino a" value={formatLandingEuro(minQuota)} accent />
         </div>
 
         {showSupportCta ? (
