@@ -85,6 +85,7 @@ export default function SoFuLandingC({
       <header className="sofu-c-hero">
         <div className="sofu-c-hero__blob-a" aria-hidden="true" />
         <div className="sofu-c-hero__blob-b" aria-hidden="true" />
+        
         <SoFuLogoWatermark className="sofu-c-hero__watermark" />
 
         <div className="sofu-c-hero__inner">

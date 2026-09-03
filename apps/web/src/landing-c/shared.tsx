@@ -36,7 +36,9 @@ export function SoFuFooter(): ReactElement {
   return (
     <footer className="sofu-c-footer">
       <span className="sofu-c-display sofu-c-footer__brand-name">
+        <Link to="/">
         <SoFuLogoFull height={34} color="var(--ink)" />
+        </Link>
       </span>
       <span className="sofu-c-footer__meta">
       2026 SoFu - Una piattaforma di crowdfunding per la comunità
@@ -48,7 +50,9 @@ export function SoFuFooter(): ReactElement {
 export function SoFuHeroBrand(): ReactElement {
   return (
     <div className="sofu-c-hero__brand">
+      <Link to="/">
       <SoFuLogoFull height={72} color="oklch(98% 0.006 90)" />
+      </Link>
     </div>
   )
 }
