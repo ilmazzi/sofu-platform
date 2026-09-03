@@ -200,7 +200,7 @@ export function FoundingCampaignPulse({
           />
           <Metric
             icon={<IconArrowDownRight size={16} stroke={1.75} />}
-            label="Max quota"
+            label="Quota iniziale"
             value={formatEuro(campaign.max_price_cents, campaign.currency)}
           />
           <Metric
@@ -242,7 +242,7 @@ export function FoundingCampaignPulse({
             <Text size="sm" ta="center" style={{ opacity: 0.85, fontFamily: founding.fontBody }}>
               Hai già sostenuto?{' '}
               <Link to="/login?next=/sostieni/stato" style={{ color: founding.ink, fontWeight: 700 }}>
-                Accedi al tuo impegno
+              Accedi per gestire le tue quote
               </Link>
             </Text>
           </Stack>

@@ -92,14 +92,12 @@ export default function SoFuLandingC({
 
           <div className="sofu-c-hero__row">
             <div className="sofu-c-hero__content">
-              <span className="sofu-c-hero__badge">Crowdfunding di comunità</span>
+              <span className="sofu-c-hero__badge">Un Crowdfunding per la comunità</span>
               <h1 className="sofu-c-display sofu-c-hero__title">
                 Più persone sostengono, meno paga ciascuna.
               </h1>
               <p className="sofu-c-hero__subtitle">
-                SoFu è la piattaforma che rimette le persone al centro: un tetto massimo al guadagno
-                di chi propone, un risparmio vero per chi crede in un progetto e lo sostiene insieme
-                agli altri.
+              SoFu è la piattaforma che rimette le persone al centro: un tetto massimo al guadagno di chi lancia una campagna di raccolta fondi, un risparmio reale per chi crede nel progetto e lo sostiene insieme alle altre persone.
               </p>
               <div className="sofu-c-hero__actions">
                 <a href="#sostieni" className="sofu-c-btn-primary">
@@ -282,7 +280,7 @@ export default function SoFuLandingC({
               delay={90}
               active={activeScenario === 1}
             >
-              SoFu prende vita: 5.000&nbsp;€ a testa per ogni quota sottoscritta.
+              SoFu prende vita: ogni quota vale 5.000€.
             </ScenarioCard>
             <ScenarioCard
               count={140000}

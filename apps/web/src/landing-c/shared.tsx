@@ -37,7 +37,7 @@ export function SoFuFooter(): ReactElement {
     <footer className="sofu-c-footer">
       <span className="sofu-c-display sofu-c-footer__brand-name">SoFu</span>
       <span className="sofu-c-footer__meta">
-        2026 SoFu &middot; Piattaforma di crowdfunding di comunità
+      2026 SoFu - Una piattaforma di crowdfunding per la comunità
       </span>
     </footer>
   )
